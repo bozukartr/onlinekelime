@@ -1,0 +1,439 @@
+* {
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 16px;
+  background: #111;
+  color: #eee;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 24px;
+  text-align: center;
+}
+
+.subtitle {
+  font-size: 13px;
+  margin-bottom: 16px;
+  text-align: center;
+  color: #aaa;
+  max-width: 800px;
+}
+
+#game-container {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 16px;
+  width: 100%;
+  max-width: 800px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.player-section {
+  flex: 1;
+  min-width: 300px;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+  background: #1a1a1a;
+  border-radius: 12px;
+  border: 2px solid #333;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.player-section.active {
+  border-color: #4caf50;
+  box-shadow: 0 0 15px rgba(76, 175, 80, 0.3);
+}
+
+.player-title {
+  margin: 0 0 12px;
+  font-size: 18px;
+  color: #fff;
+  text-align: center;
+}
+
+.board {
+  display: grid;
+  grid-template-rows: repeat(6, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.tile {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  font-size: 20px;
+  text-align: center;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #222;
+  color: #eee;
+}
+
+.tile:disabled {
+  color: #eee;
+}
+
+.correct {
+  background: #3a9c3a;
+  border-color: #3a9c3a;
+  color: #fff;
+}
+
+.present {
+  background: #c7a402;
+  border-color: #c7a402;
+  color: #fff;
+}
+
+.absent {
+  background: #333;
+  border-color: #333;
+  color: #888;
+}
+
+.locked {
+  box-shadow: 0 0 0 2px #fff4 inset;
+}
+
+/* 6. tahminde verilen ipucu için kırmızı kutu */
+.hint {
+  background: #c0392b;
+  border-color: #c0392b;
+  color: #fff;
+}
+
+.guess-button {
+  width: 100%;
+  padding: 10px;
+  font-size: 15px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background: #444;
+  color: #eee;
+  margin-bottom: 8px;
+}
+
+.guess-button:active {
+  transform: scale(0.98);
+}
+
+.guess-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+#controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  width: 100%;
+  max-width: 800px;
+  justify-content: center;
+}
+
+#resetButton {
+  padding: 12px 32px;
+  font-size: 15px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background: #555;
+  color: #eee;
+  font-weight: 600;
+}
+
+#resetButton:active {
+  transform: scale(0.98);
+}
+
+.message {
+  font-size: 14px;
+  text-align: center;
+  min-height: 40px;
+  max-width: 360px;
+  width: 100%;
+}
+
+.message.win {
+  color: #4caf50;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.message.lose {
+  color: #ff5252;
+  font-weight: bold;
+}
+
+.message.neutral {
+  color: #aaa;
+}
+
+#hint {
+  font-size: 12px;
+  text-align: center;
+  color: #777;
+  margin-top: 4px;
+  max-width: 800px;
+}
+
+/* Connection Screen Styles */
+#connection-screen {
+  width: 100%;
+  max-width: 500px;
+  margin-top: 20px;
+}
+
+.connection-box {
+  background: #1a1a1a;
+  border: 2px solid #333;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.connection-box h2 {
+  margin: 0 0 20px;
+  font-size: 20px;
+  text-align: center;
+  color: #fff;
+}
+
+.mode-buttons, .online-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mode-button {
+  padding: 20px;
+  font-size: 18px;
+  border-radius: 8px;
+  border: 2px solid #444;
+  background: #222;
+  color: #eee;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mode-button:hover {
+  background: #333;
+  border-color: #4caf50;
+  transform: translateY(-2px);
+}
+
+.mode-button small {
+  display: block;
+  font-size: 12px;
+  color: #aaa;
+  margin-top: 4px;
+}
+
+.action-button {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  background: #4caf50;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s ease;
+}
+
+.action-button:hover {
+  background: #45a049;
+}
+
+.back-button {
+  width: 100%;
+  padding: 10px;
+  font-size: 14px;
+  border-radius: 8px;
+  border: 1px solid #444;
+  background: transparent;
+  color: #aaa;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.back-button:hover {
+  background: #222;
+  color: #eee;
+}
+
+.info-box {
+  background: #222;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 12px;
+}
+
+.info-box p {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: #aaa;
+}
+
+.room-code-display {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.room-code-display input {
+  flex: 1;
+  padding: 12px;
+  font-size: 18px;
+  font-weight: bold;
+  text-align: center;
+  background: #111;
+  border: 2px solid #4caf50;
+  border-radius: 6px;
+  color: #4caf50;
+  font-family: 'Courier New', monospace;
+}
+
+.copy-button {
+  padding: 12px 16px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: none;
+  background: #444;
+  color: #eee;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.copy-button:hover {
+  background: #555;
+}
+
+.copy-button:active {
+  background: #4caf50;
+}
+
+.waiting-text {
+  text-align: center;
+  color: #ffb74d;
+  font-size: 14px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+#roomCodeInput {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  text-align: center;
+  background: #111;
+  border: 2px solid #444;
+  border-radius: 6px;
+  color: #eee;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+
+#roomCodeInput:focus {
+  outline: none;
+  border-color: #4caf50;
+}
+
+.status-bar {
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #1a1a1a;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+#statusText {
+  color: #4caf50;
+  font-weight: 600;
+}
+
+#opponentName {
+  color: #aaa;
+}
+
+.menu-button {
+  padding: 12px 24px;
+  font-size: 15px;
+  border-radius: 8px;
+  border: none;
+  background: #2196f3;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.menu-button:hover {
+  background: #1976d2;
+}
+
+.disconnect-button {
+  padding: 12px 24px;
+  font-size: 15px;
+  border-radius: 8px;
+  border: none;
+  background: #ff5252;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.disconnect-button:hover {
+  background: #ff1744;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  #game-container {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .player-section {
+    max-width: 100%;
+  }
+  
+  .status-bar {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
