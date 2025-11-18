@@ -248,6 +248,8 @@ function getGuessFromRow(gridInputs, rowIndex) {
 }
 
 function evaluateGuess(guess) {
+  console.log("Tahmin değerlendiriliyor - Guess:", guess, "Target:", secretWord);
+  
   const result = new Array(COLS).fill("absent");
   const targetArr = secretWord.split("");
   const guessArr = guess.split("");
@@ -275,6 +277,7 @@ function evaluateGuess(guess) {
     }
   }
 
+  console.log("Sonuç:", result);
   return result;
 }
 
@@ -559,10 +562,15 @@ function handleGuess(playerName, gridInputs, currentRow, messageEl, guessButton,
 }
 
 function resetGame(skipWordSelection = false) {
-  // Sadece oda sahibi kelime seçebilir (online modda)
-  if (!skipWordSelection) {
+  // Online modda kelime ve sıra kontrolü
+  if (isOnlineMode && skipWordSelection) {
+    // Oyuncu 2: Firebase'den gelen verileri kullan, YENİ KELİME SEÇME!
+    console.log("Online mod - mevcut kelime kullanılıyor:", secretWord);
+  } else if (!skipWordSelection) {
+    // Lokal mod veya Oyuncu 1: Yeni kelime seç
     secretWord = pickRandomWord();
     currentTurn = Math.random() < 0.5 ? "player1" : "player2";
+    console.log("Yeni kelime seçildi:", secretWord);
   }
   
   currentRow1 = 0;
@@ -573,13 +581,17 @@ function resetGame(skipWordSelection = false) {
   firstLetterHintGiven1 = false;
   firstLetterHintGiven2 = false;
   
-  messageEl1.textContent = "";
-  messageEl1.className = "message";
-  messageEl2.textContent = "";
-  messageEl2.className = "message";
+  if (messageEl1) {
+    messageEl1.textContent = "";
+    messageEl1.className = "message";
+  }
+  if (messageEl2) {
+    messageEl2.textContent = "";
+    messageEl2.className = "message";
+  }
   
-  guessButton1.disabled = false;
-  guessButton2.disabled = false;
+  if (guessButton1) guessButton1.disabled = false;
+  if (guessButton2) guessButton2.disabled = false;
 
   createBoard(boardEl1, gridInputs1, guessButton1);
   createBoard(boardEl2, gridInputs2, guessButton2);
@@ -594,7 +606,7 @@ function resetGame(skipWordSelection = false) {
   // Sıra durumunu güncelle
   updateBoardsForTurn();
   
-  // console.log("DEBUG kelime:", secretWord);
+  console.log("Reset tamamlandı - Kelime:", secretWord, "Sıra:", currentTurn);
 }
 
 // ======================
@@ -778,6 +790,8 @@ async function createRoom() {
       createdAt: Date.now()
     });
     
+    console.log("Firebase'e kaydedilen kelime:", secretWord);
+    
     // Oda kodunu göster
     roomCodeDisplay.value = currentRoomCode;
     document.querySelector(".online-buttons").style.display = "none";
@@ -844,13 +858,16 @@ async function joinRoom(roomCode) {
       currentRow: 0
     });
     
-    // Oyun verilerini al
+    // Oyun verilerini al ve SAKLA
     secretWord = roomData.secretWord;
     currentTurn = roomData.currentTurn;
     lockedPositions = roomData.lockedPositions || [false, false, false, false, false];
+    currentRow1 = roomData.player1?.currentRow || 0;
+    currentRow2 = roomData.player2?.currentRow || 0;
     
     console.log("Odaya katılındı:", roomCode);
-    console.log("Kelime senkronize edildi:", secretWord);
+    console.log("Kelime Firebase'den alındı:", secretWord);
+    console.log("Başlangıç sırası:", currentTurn);
     
     // Oyun verilerini dinle
     listenToGameUpdates();
@@ -886,15 +903,35 @@ function listenToGameUpdates() {
   
   // Reset dinle (oyuncu 2 için)
   if (myPlayerNumber === 2) {
-    currentRoomRef.on('value', (snapshot) => {
-      const roomData = snapshot.val();
-      if (roomData && roomData.gameOver === false && gameOver === true) {
-        // Oda sahibi reset yapmış
-        console.log("Oyun yeniden başlatıldı");
-        secretWord = roomData.secretWord;
-        currentTurn = roomData.currentTurn;
-        lockedPositions = roomData.lockedPositions || [false, false, false, false, false];
-        resetGame(true);
+    let lastResetTime = Date.now();
+    currentRoomRef.child('gameOver').on('value', (snapshot) => {
+      const isGameOver = snapshot.val();
+      
+      // Oyun bitmişti ama şimdi false oldu = reset yapıldı
+      if (isGameOver === false && gameOver === true) {
+        const now = Date.now();
+        // Son 2 saniyede reset yapıldıysa
+        if (now - lastResetTime > 2000) {
+          lastResetTime = now;
+          
+          // Firebase'den güncel verileri al
+          currentRoomRef.once('value').then((snap) => {
+            const roomData = snap.val();
+            if (roomData) {
+              console.log("Reset algılandı, veriler güncelleniyor...");
+              secretWord = roomData.secretWord;
+              currentTurn = roomData.currentTurn;
+              lockedPositions = roomData.lockedPositions || [false, false, false, false, false];
+              currentRow1 = roomData.player1?.currentRow || 0;
+              currentRow2 = roomData.player2?.currentRow || 0;
+              
+              console.log("Senkronize edilen kelime:", secretWord);
+              resetGame(true);
+            }
+          });
+        }
+      } else if (isGameOver === true) {
+        lastResetTime = Date.now();
       }
     });
   }
@@ -1037,7 +1074,7 @@ function applyOpponentGuess(guessData) {
   const otherGridInputs = myPlayerNumber === 1 ? gridInputs2 : gridInputs1;
   const rowIndex = guessData.currentRow - 1;
   
-  if (rowIndex >= 0 && rowIndex < ROWS) {
+  if (rowIndex >= 0 && rowIndex < ROWS && otherGridInputs[rowIndex]) {
     applyGuessToBoard(otherGridInputs, rowIndex, guessData.guess, guessData.result);
     
     if (myPlayerNumber === 1) {
@@ -1045,6 +1082,8 @@ function applyOpponentGuess(guessData) {
     } else {
       currentRow1 = guessData.currentRow;
     }
+    
+    console.log("Rakibin tahmini board'a uygulandı - Row:", rowIndex, "Guess:", guessData.guess);
   }
 }
 
