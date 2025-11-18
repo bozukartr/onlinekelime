@@ -193,14 +193,14 @@ async function getWordMeaning(word) {
   }
 }
 
-// Kelime anlamını göster
+// Kelime anlamını göster (lokal veya cache'den)
 async function showWordMeaning(word, messageEl) {
   if (!messageEl) {
     console.log('messageEl undefined, anlam gösterilemiyor');
     return;
   }
   
-  // Mevcut mesajı al (textContent kullan, daha güvenli)
+  // Mevcut mesajı al
   const currentMessage = messageEl.textContent;
   messageEl.textContent = currentMessage + '\n\nAnlam yükleniyor...';
   
@@ -209,14 +209,87 @@ async function showWordMeaning(word, messageEl) {
   console.log('Alınan anlam:', meaning);
   
   if (meaning) {
-    // Yükleniyor mesajını kaldır ve anlamı göster
-    // textContent kullanarak mobil uyumluluk sağla
     messageEl.textContent = currentMessage + '\n\n📖 ' + meaning;
     console.log('Anlam gösterildi');
   } else {
-    // Anlam alınamazsa yükleniyor mesajını kaldır
     messageEl.textContent = currentMessage;
     console.log('Anlam alınamadı, mesaj kaldırıldı');
+  }
+}
+
+// Online modda: Bir kere Gemini'den al, Firebase'e kaydet, her iki oyuncu da okusun
+async function fetchAndShareWordMeaning(word, messageEl1, messageEl2) {
+  if (!currentRoomRef) {
+    // Firebase yoksa normal şekilde göster
+    if (messageEl1) showWordMeaning(word, messageEl1);
+    if (messageEl2) showWordMeaning(word, messageEl2);
+    return;
+  }
+  
+  // Önce Firebase'de bu kelimenin anlamı var mı kontrol et
+  try {
+    const meaningRef = currentRoomRef.child('wordMeaning');
+    const snapshot = await meaningRef.once('value');
+    
+    if (snapshot.val()) {
+      // Anlam zaten var, her iki oyuncuya da göster
+      const meaning = snapshot.val();
+      console.log('Anlam Firebase cache\'den alındı:', meaning);
+      
+      if (messageEl1) {
+        const currentMsg1 = messageEl1.textContent;
+        messageEl1.textContent = currentMsg1 + '\n\n📖 ' + meaning;
+      }
+      if (messageEl2) {
+        const currentMsg2 = messageEl2.textContent;
+        messageEl2.textContent = currentMsg2 + '\n\n📖 ' + meaning;
+      }
+      return;
+    }
+    
+    // Anlam yok, yükleniyor mesajı göster
+    if (messageEl1) {
+      const currentMsg1 = messageEl1.textContent;
+      messageEl1.textContent = currentMsg1 + '\n\nAnlam yükleniyor...';
+    }
+    if (messageEl2) {
+      const currentMsg2 = messageEl2.textContent;
+      messageEl2.textContent = currentMsg2 + '\n\nAnlam yükleniyor...';
+    }
+    
+    // Gemini'den anlamı al (SADECE BİR KERE)
+    const meaning = await getWordMeaning(word);
+    
+    if (meaning) {
+      // Firebase'e kaydet
+      await meaningRef.set(meaning);
+      console.log('Anlam Gemini\'den alındı ve Firebase\'e kaydedildi:', meaning);
+      
+      // Her iki oyuncuya da göster
+      if (messageEl1) {
+        const currentMsg1 = messageEl1.textContent.replace('Anlam yükleniyor...', '');
+        messageEl1.textContent = currentMsg1 + '\n\n📖 ' + meaning;
+      }
+      if (messageEl2) {
+        const currentMsg2 = messageEl2.textContent.replace('Anlam yükleniyor...', '');
+        messageEl2.textContent = currentMsg2 + '\n\n📖 ' + meaning;
+      }
+    } else {
+      // Anlam alınamazsa yükleniyor mesajını kaldır
+      if (messageEl1) {
+        const currentMsg1 = messageEl1.textContent.replace('\n\nAnlam yükleniyor...', '');
+        messageEl1.textContent = currentMsg1;
+      }
+      if (messageEl2) {
+        const currentMsg2 = messageEl2.textContent.replace('\n\nAnlam yükleniyor...', '');
+        messageEl2.textContent = currentMsg2;
+      }
+    }
+  } catch (error) {
+    console.error('Firebase anlam paylaşımı hatası:', error);
+    // Hata olursa normal yöntemi kullan
+    if (messageEl1) showWordMeaning(word, messageEl1);
+    if (messageEl2) showWordMeaning(word, messageEl2);
   }
 }
 
@@ -605,12 +678,13 @@ function handleGuess(playerName, gridInputs, currentRow, messageEl, guessButton,
       otherMessageEl.className = "message lose";
     }
     
-    // Kelimenin anlamını göster (kazanan için)
-    showWordMeaning(secretWord, messageEl);
-    
-    // Kaybeden için de anlamı göster
-    if (otherMessageEl) {
-      showWordMeaning(secretWord, otherMessageEl);
+    // Kelimenin anlamını göster
+    if (isOnlineMode) {
+      // Online modda: Sadece kazanan kişi Gemini'ye istek atsın
+      fetchAndShareWordMeaning(secretWord, messageEl, otherMessageEl);
+    } else {
+      // Lokal modda: Sadece kendi mesajına göster
+      showWordMeaning(secretWord, messageEl);
     }
     
     // Online modda rakibe bildir
@@ -643,14 +717,17 @@ function handleGuess(playerName, gridInputs, currentRow, messageEl, guessButton,
       if (messageEl1) {
         messageEl1.textContent = "Berabere! Kelime: " + secretWord;
         messageEl1.className = "message neutral";
-        // Anlamı göster
-        showWordMeaning(secretWord, messageEl1);
       }
       if (messageEl2) {
         messageEl2.textContent = "Berabere! Kelime: " + secretWord;
         messageEl2.className = "message neutral";
-        // Anlamı göster
-        showWordMeaning(secretWord, messageEl2);
+      }
+      
+      // Anlamı göster (online modda paylaşımlı)
+      if (isOnlineMode) {
+        fetchAndShareWordMeaning(secretWord, messageEl1, messageEl2);
+      } else {
+        showWordMeaning(secretWord, messageEl1);
       }
     } else {
       // Sıra diğer oyuncuya geçer
@@ -1082,6 +1159,24 @@ function listenToGameUpdates() {
     }
   });
   
+  // Kelime anlamını dinle (online modda paylaşımlı)
+  currentRoomRef.child('wordMeaning').on('value', (snapshot) => {
+    const meaning = snapshot.val();
+    if (meaning && gameOver) {
+      // Anlam Firebase'e yazıldı, her iki oyuncuya da göster
+      console.log('Anlam Firebase\'den alındı:', meaning);
+      
+      if (messageEl1 && messageEl1.textContent.includes(secretWord)) {
+        const currentMsg = messageEl1.textContent.replace('Anlam yükleniyor...', '').replace(/\n\n📖 .*/s, '');
+        messageEl1.textContent = currentMsg + '\n\n📖 ' + meaning;
+      }
+      if (messageEl2 && messageEl2.textContent.includes(secretWord)) {
+        const currentMsg = messageEl2.textContent.replace('Anlam yükleniyor...', '').replace(/\n\n📖 .*/s, '');
+        messageEl2.textContent = currentMsg + '\n\n📖 ' + meaning;
+      }
+    }
+  });
+  
   // Reset dinle (oyuncu 2 için)
   if (myPlayerNumber === 2) {
     let lastResetTime = Date.now();
@@ -1339,14 +1434,10 @@ function handleOnlineGameEnd(winnerPlayer) {
     if (myMessageEl) {
       myMessageEl.textContent = "🎉 KAZANDIN! Kelime: " + secretWord;
       myMessageEl.className = "message win";
-      // Anlamı göster
-      showWordMeaning(secretWord, myMessageEl);
     }
     if (otherMessageEl) {
       otherMessageEl.textContent = "😔 Kaybettin! Kelime: " + secretWord;
       otherMessageEl.className = "message lose";
-      // Anlamı göster
-      showWordMeaning(secretWord, otherMessageEl);
     }
   } else {
     // Rakip kazandı
@@ -1355,16 +1446,15 @@ function handleOnlineGameEnd(winnerPlayer) {
     if (myMessageEl) {
       myMessageEl.textContent = "😔 Kaybettin! Kelime: " + secretWord;
       myMessageEl.className = "message lose";
-      // Anlamı göster
-      showWordMeaning(secretWord, myMessageEl);
     }
     if (otherMessageEl) {
       otherMessageEl.textContent = "🎉 KAZANDI! Kelime: " + secretWord;
       otherMessageEl.className = "message win";
-      // Anlamı göster
-      showWordMeaning(secretWord, otherMessageEl);
     }
   }
+  
+  // Anlamı paylaşımlı şekilde göster (sadece bir Gemini isteği)
+  fetchAndShareWordMeaning(secretWord, messageEl1, messageEl2);
 }
 
 // Rakibin tahminini tahtaya uygula
@@ -1469,6 +1559,7 @@ newGameButton.addEventListener("click", async () => {
           lockedPositions: [false, false, false, false, false],
           gameOver: false,
           winner: null,
+          wordMeaning: null, // Eski anlamı temizle
           'player1/currentRow': 0,
           'player2/currentRow': 0,
           'player1/lastGuess': null,
