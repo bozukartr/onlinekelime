@@ -846,11 +846,12 @@ async function joinRoom(roomCode) {
     lockedPositions = roomData.lockedPositions || [false, false, false, false, false];
     
     console.log("Odaya katılındı:", roomCode);
+    console.log("Kelime senkronize edildi:", secretWord);
     
     // Oyun verilerini dinle
     listenToGameUpdates();
     
-    // Oyunu başlat
+    // Oyunu başlat (board'ları oluştur)
     startOnlineGame();
     
   } catch (error) {
@@ -941,9 +942,13 @@ function startOnlineGame() {
   document.getElementById("disconnectBtn").style.display = "inline-block";
   document.getElementById("backToMenuBtn").style.display = "inline-block";
   
-  // Oyun sahibi kelimeyi seçer
+  // Her iki oyuncu da board'u oluşturmalı
   if (myPlayerNumber === 1) {
+    // Oyun sahibi kelimeyi seçer ve board'u oluşturur
     resetGame();
+  } else {
+    // Katılan oyuncu board'u oluşturur (kelime zaten Firebase'den alındı)
+    resetGame(true); // skipWordSelection = true
   }
 }
 
