@@ -36,7 +36,7 @@ const firebaseConfig = {
 // ÖNEMLİ: Kendi API anahtarınızı buraya ekleyin
 // https://aistudio.google.com/app/apikey adresinden ücretsiz alabilirsiniz
 const GEMINI_API_KEY = "AIzaSyDdZtZLJG0x9bHG2G2AG1o1-ZPoIZTjzyc";
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent";
 
 // Oyuncu 1
 let currentRow1 = 0;
@@ -135,38 +135,43 @@ async function getWordMeaning(word) {
   }
   
   try {
-    const prompt = `"${word}" kelimesinin kısa ve öz Türkçe anlamını sadece 1 cümle ile açıkla. Ekstra bilgi ekleme, sadece anlamı ver.`;
+    const prompt = `${word} kelimesinin anlamını Türkçe olarak tek cümle ile açıkla.`;
+    
+    const requestBody = {
+      contents: [{
+        parts: [{
+          text: prompt
+        }]
+      }],
+      generationConfig: {
+        temperature: 0.4,
+        maxOutputTokens: 100
+      }
+    };
     
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 80,
-          topP: 0.8,
-          topK: 40
-        }
-      })
+      body: JSON.stringify(requestBody)
     });
     
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Gemini API hatası:', response.status, errorData);
+      const errorText = await response.text();
+      console.error('Gemini API hatası:', response.status, errorText);
       return null;
     }
     
     const data = await response.json();
     const meaning = data.candidates?.[0]?.content?.parts?.[0]?.text;
     
-    return meaning ? meaning.trim() : null;
+    if (meaning) {
+      console.log('Gemini yanıtı:', meaning);
+      return meaning.trim();
+    }
+    
+    return null;
   } catch (error) {
     console.error('Kelime anlamı alınamadı:', error);
     return null;
@@ -667,21 +672,29 @@ function handleGuess(playerName, gridInputs, currentRow, messageEl, guessButton,
 }
 
 function resetGame(skipWordSelection = false) {
-  // Online modda kelime ve sıra kontrolü
-  if (isOnlineMode && skipWordSelection) {
-    // Oyuncu 2: Firebase'den gelen verileri kullan, YENİ KELİME SEÇME!
-    console.log("Online mod - Firebase kelimesi kullanılıyor:", secretWord);
-    // ASLA YENİ KELİME SEÇME!
-  } else if (!skipWordSelection) {
-    // Lokal mod veya Oyuncu 1: Yeni kelime seç
+  console.log("resetGame çağrıldı - skipWordSelection:", skipWordSelection, "Mevcut kelime:", secretWord);
+  
+  // Kelime seçimi
+  if (skipWordSelection) {
+    // MEVCUT KELİMEYİ KULLAN - HİÇBİR ŞEKLE DEĞİŞTİRME!
+    console.log(">>> MEVCUT KELIME KORUNUYOR:", secretWord);
+  } else {
+    // Yeni kelime seç
     if (isLocalMode) {
       secretWord = pickRandomWord();
-      currentTurn = "player1"; // Lokal modda tek oyuncu
-    } else {
-      secretWord = pickRandomWord();
-      currentTurn = Math.random() < 0.5 ? "player1" : "player2";
+      currentTurn = "player1";
+      console.log(">>> YENİ KELIME SEÇİLDİ (Lokal):", secretWord);
+    } else if (isOnlineMode && myPlayerNumber === 1) {
+      // Oyuncu 1 için - ama sadece ilk seferde!
+      // createRoom'da zaten seçilmişse tekrar seçme
+      if (!secretWord || secretWord === "HATA!") {
+        secretWord = pickRandomWord();
+        currentTurn = Math.random() < 0.5 ? "player1" : "player2";
+        console.log(">>> YENİ KELIME SEÇİLDİ (Online-P1):", secretWord);
+      } else {
+        console.log(">>> MEVCUT KELIME KULLANILIYOR (Online-P1):", secretWord);
+      }
     }
-    console.log("Yeni kelime seçildi:", secretWord);
   }
   
   currentRow1 = 0;
@@ -1154,11 +1167,19 @@ async function startOnlineGame() {
   
   // Her iki oyuncu da board'u oluşturmalı
   if (myPlayerNumber === 1) {
-    // Oyun sahibi kelimeyi seçer ve board'u oluşturur
-    resetGame();
-    console.log("Oyuncu 1 oyunu başlattı - Kelime:", secretWord);
+    // Oyun sahibi board'u oluşturur (kelime zaten createRoom'da seçildi)
+    console.log("========================================");
+    console.log("OYUNCU 1 - BOARD OLUŞTURULUYOR");
+    console.log("Kullanılacak kelime:", secretWord);
+    console.log("========================================");
+    
+    // ÖNEMLİ: Kelime zaten var, YENİ SEÇME!
+    resetGame(true); // skipWordSelection = true
   } else {
     // Katılan oyuncu Firebase'den güncel verileri bir kez daha okuyor
+    console.log("========================================");
+    console.log("OYUNCU 2 - FIREBASE'DEN VERİ OKUNUYOR");
+    
     try {
       const snapshot = await currentRoomRef.once('value');
       const roomData = snapshot.val();
@@ -1166,14 +1187,21 @@ async function startOnlineGame() {
         secretWord = roomData.secretWord;
         currentTurn = roomData.currentTurn;
         lockedPositions = roomData.lockedPositions || [false, false, false, false, false];
-        console.log("Oyuncu 2 oyunu başlattı - Firebase'den kelime:", secretWord);
+        
+        console.log("Firebase'den alınan kelime:", secretWord);
+        console.log("Başlangıç sırası:", currentTurn);
       }
     } catch (error) {
       console.error("Veri okuma hatası:", error);
     }
     
+    console.log("Board oluşturulmadan önce kelime:", secretWord);
+    console.log("========================================");
+    
     // Board'u oluştur (kelime zaten Firebase'den alındı)
     resetGame(true); // skipWordSelection = true
+    
+    console.log("Board oluşturulduktan SONRA kelime:", secretWord);
   }
 }
 
