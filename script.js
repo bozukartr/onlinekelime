@@ -864,7 +864,7 @@ function listenToGameUpdates() {
   // Kilitli pozisyonları dinle
   currentRoomRef.child('lockedPositions').on('value', (snapshot) => {
     const positions = snapshot.val();
-    if (positions) {
+    if (positions && gridInputs1.length > 0 && gridInputs2.length > 0) {
       lockedPositions = positions;
       updateBoardsForTurn();
     }
@@ -873,7 +873,7 @@ function listenToGameUpdates() {
   // Sıra değişimini dinle
   currentRoomRef.child('currentTurn').on('value', (snapshot) => {
     const turn = snapshot.val();
-    if (turn) {
+    if (turn && gridInputs1.length > 0 && gridInputs2.length > 0) {
       currentTurn = turn;
       updateBoardsForTurn();
     }
@@ -888,7 +888,18 @@ function listenToGameUpdates() {
   });
   
   // Bağlantı durumunu dinle
+  let isFirstConnection = true;
   currentRoomRef.child(otherPlayer + '/connected').on('value', (snapshot) => {
+    // İlk yüklemede uyarı gösterme
+    if (isFirstConnection) {
+      isFirstConnection = false;
+      if (snapshot.val() === true) {
+        statusText.textContent = "🟢 Bağlı";
+        opponentName.textContent = "Rakip: Hazır";
+      }
+      return;
+    }
+    
     if (snapshot.val() === false && isOnlineMode) {
       statusText.textContent = "🔴 Bağlantı Kesildi";
       opponentName.textContent = "Rakip: Ayrıldı";
