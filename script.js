@@ -15,10 +15,22 @@ let isOnlineMode = false;
 let isLocalMode = false;
 let myPlayerNumber = 1; // Ben hangi oyuncuyum (1 veya 2)
 
-// PeerJS değişkenleri
-let peer = null;
-let connection = null;
-let myPeerId = null;
+// Firebase değişkenleri
+let database = null;
+let currentRoomRef = null;
+let currentRoomCode = null;
+
+// Firebase yapılandırması (ücretsiz public demo)
+const firebaseConfig = {
+  apiKey: "AIzaSyBoJhL__0ubqzw1rniO8wgrh0nvBlP55eM",
+  authDomain: "onlinekelime.firebaseapp.com",
+  databaseURL: "https://onlinekelime-default-rtdb.firebaseio.com",
+  projectId: "onlinekelime",
+  storageBucket: "onlinekelime.firebasestorage.app",
+  messagingSenderId: "286213395752",
+  appId: "1:286213395752:web:be9932439887d1fb0dec1d",
+  measurementId: "G-0KV0ZC3XZF"
+};
 
 // Oyuncu 1
 let currentRow1 = 0;
@@ -460,16 +472,8 @@ function handleGuess(playerName, gridInputs, currentRow, messageEl, guessButton,
     
     // Online modda rakibe bildir
     if (isOnlineMode) {
-      sendData({
-        type: "guess",
-        playerName: playerName,
-        guess: guess,
-        result: result,
-        newLockedPositions: lockedPositions,
-        newCurrentRow: currentRow + 1,
-        newTurn: currentTurn,
-        winner: playerName
-      });
+      sendWin(playerName);
+      sendGuess(playerName, guess, result, currentRow + 1);
     }
     
     return;
@@ -503,16 +507,7 @@ function handleGuess(playerName, gridInputs, currentRow, messageEl, guessButton,
     
     // Online modda rakibe bildir
     if (isOnlineMode) {
-      sendData({
-        type: "guess",
-        playerName: playerName,
-        guess: guess,
-        result: result,
-        newLockedPositions: lockedPositions,
-        newCurrentRow: currentRow,
-        newTurn: currentTurn,
-        winner: null
-      });
+      sendGuess(playerName, guess, result, currentRow);
     }
     
     updateBoardsForTurn();
@@ -541,16 +536,7 @@ function handleGuess(playerName, gridInputs, currentRow, messageEl, guessButton,
   
   // Online modda rakibe bildir
   if (isOnlineMode) {
-    sendData({
-      type: "guess",
-      playerName: playerName,
-      guess: guess,
-      result: result,
-      newLockedPositions: lockedPositions,
-      newCurrentRow: currentRow,
-      newTurn: currentTurn,
-      winner: null
-    });
+    sendGuess(playerName, guess, result, currentRow);
   }
   
   // Tüm tahtaları yeni sıra için güncelle
@@ -600,12 +586,29 @@ function resetGame(skipWordSelection = false) {
 // ONLINE MULTIPLAYER LOGIC
 // ======================
 
+// Firebase'i başlat
+function initFirebase() {
+  try {
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    database = firebase.database();
+    console.log('Firebase bağlantısı kuruldu.');
+    return true;
+  } catch (error) {
+    console.error('Firebase başlatılamadı:', error);
+    // Firebase olmadan lokal oyun hala çalışır
+    return false;
+  }
+}
+
 // Sayfa yüklendiğinde kelimeleri yükle
 async function initGame() {
   const loaded = await loadWords();
   if (loaded) {
     console.log('Oyun hazır!');
   }
+  initFirebase();
 }
 
 // Lokal mod başlat
@@ -665,10 +668,10 @@ document.getElementById("joinRoomBtn").addEventListener("click", () => {
 
 // Bağlan
 document.getElementById("connectBtn").addEventListener("click", () => {
-  const roomCode = roomCodeInput.value.trim();
+  const roomCode = roomCodeInput.value.trim().toUpperCase();
   if (roomCode) {
-    if (roomCode.length < 10) {
-      alert("Oda kodu çok kısa. Lütfen tam oda kodunu girin.");
+    if (roomCode.length < 4) {
+      alert("Oda kodu çok kısa.");
       return;
     }
     joinRoom(roomCode);
@@ -717,166 +720,183 @@ document.getElementById("disconnectBtn").addEventListener("click", () => {
   disconnect();
 });
 
-// Oda oluştur
-function createRoom() {
-  isOnlineMode = true;
-  myPlayerNumber = 1; // Oda sahibi Oyuncu 1
-  
-  // PeerJS bağlantısı oluştur (alternatif sunucu ayarları ile)
-  try {
-    peer = new Peer({
-      config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:global.stun.twilio.com:3478' }
-        ]
-      }
-    });
-  } catch (error) {
-    console.error("Peer oluşturma hatası:", error);
-    alert("Bağlantı başlatılamadı. Lütfen sayfayı yenileyin.");
+// Rastgele oda kodu oluştur
+function generateRoomCode() {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+// Oda oluştur (Firebase)
+async function createRoom() {
+  if (!database) {
+    alert("Bağlantı kurulamadı. Lütfen sayfayı yenileyin.");
     return;
   }
   
-  peer.on("open", (id) => {
-    myPeerId = id;
-    // Tüm ID'yi göster (daha güvenilir)
-    roomCodeDisplay.value = id;
+  isOnlineMode = true;
+  myPlayerNumber = 1;
+  
+  // Rastgele oda kodu
+  currentRoomCode = generateRoomCode();
+  currentRoomRef = database.ref('rooms/' + currentRoomCode);
+  
+  // Kelime seç
+  secretWord = pickRandomWord();
+  currentTurn = Math.random() < 0.5 ? "player1" : "player2";
+  
+  try {
+    // Oda verilerini oluştur
+    await currentRoomRef.set({
+      host: "player1",
+      secretWord: secretWord,
+      currentTurn: currentTurn,
+      player1: {
+        connected: true,
+        currentRow: 0
+      },
+      player2: {
+        connected: false,
+        currentRow: 0
+      },
+      lockedPositions: [false, false, false, false, false],
+      gameOver: false,
+      winner: null,
+      createdAt: Date.now()
+    });
+    
+    // Oda kodunu göster
+    roomCodeDisplay.value = currentRoomCode;
     document.querySelector(".online-buttons").style.display = "none";
     roomInfo.style.display = "block";
     
-    console.log("Oda ID'si:", id);
+    console.log("Oda oluşturuldu:", currentRoomCode);
     
-    // Diğer oyuncudan gelen bağlantıyı dinle
-    peer.on("connection", (conn) => {
-      console.log("Yeni bağlantı alındı:", conn.peer);
-      connection = conn;
-      setupConnection();
-      
-      // Bağlandı, oyunu başlat
-      setTimeout(() => {
+    // Player2'nin katılmasını bekle
+    currentRoomRef.child('player2/connected').on('value', (snapshot) => {
+      if (snapshot.val() === true) {
+        console.log("Oyuncu 2 katıldı!");
         startOnlineGame();
-      }, 500);
-    });
-  });
-  
-  peer.on("error", (err) => {
-    console.error("Peer error:", err);
-    let errorMsg = "Bağlantı hatası: ";
-    if (err.type === "unavailable-id") {
-      errorMsg = "Oda ID'si kullanılamıyor. Lütfen tekrar deneyin.";
-    } else if (err.type === "peer-unavailable") {
-      errorMsg = "Rakip bulunamadı. Oda kodu doğru mu?";
-    } else if (err.type === "network") {
-      errorMsg = "Ağ bağlantı hatası. İnternet bağlantınızı kontrol edin.";
-    } else if (err.type === "server-error") {
-      errorMsg = "Sunucu hatası. Lütfen birkaç saniye sonra tekrar deneyin.";
-    } else {
-      errorMsg += err.type;
-    }
-    alert(errorMsg);
-  });
-}
-
-// Odaya katıl
-function joinRoom(roomCode) {
-  isOnlineMode = true;
-  myPlayerNumber = 2; // Katılan oyuncu Oyuncu 2
-  
-  // PeerJS bağlantısı oluştur (alternatif sunucu ayarları ile)
-  try {
-    peer = new Peer({
-      config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:global.stun.twilio.com:3478' }
-        ]
       }
     });
+    
+    // Oyun verilerini dinle
+    listenToGameUpdates();
+    
   } catch (error) {
-    console.error("Peer oluşturma hatası:", error);
-    alert("Bağlantı başlatılamadı. Lütfen sayfayı yenileyin.");
+    console.error("Oda oluşturma hatası:", error);
+    alert("Oda oluşturulamadı: " + error.message);
+  }
+}
+
+// Odaya katıl (Firebase)
+async function joinRoom(roomCode) {
+  if (!database) {
+    alert("Bağlantı kurulamadı. Lütfen sayfayı yenileyin.");
     return;
   }
   
-  peer.on("open", () => {
-    console.log("Bağlantı hazır, odaya katılınıyor:", roomCode);
+  isOnlineMode = true;
+  myPlayerNumber = 2;
+  currentRoomCode = roomCode;
+  currentRoomRef = database.ref('rooms/' + roomCode);
+  
+  try {
+    // Oda var mı kontrol et
+    const snapshot = await currentRoomRef.once('value');
     
-    // Direkt verilen kodu kullan (tam ID)
-    connection = peer.connect(roomCode, {
-      reliable: true
-    });
-    
-    if (!connection) {
-      alert("Bağlantı oluşturulamadı. Oda kodu doğru mu?");
+    if (!snapshot.exists()) {
+      alert("Oda bulunamadı. Kod doğru mu kontrol edin.");
       document.querySelector(".online-buttons").style.display = "block";
       joinForm.style.display = "none";
       return;
     }
     
-    setupConnection();
+    const roomData = snapshot.val();
     
-    connection.on("open", () => {
-      console.log("Bağlantı başarılı!");
-      setTimeout(() => {
-        startOnlineGame();
-      }, 500);
-    });
-    
-    connection.on("error", (err) => {
-      console.error("Connection error:", err);
-      alert("Bağlantı hatası: " + err);
+    if (roomData.player2.connected) {
+      alert("Bu oda dolu. Başka bir oda kodu deneyin.");
       document.querySelector(".online-buttons").style.display = "block";
       joinForm.style.display = "none";
-    });
-  });
-  
-  peer.on("error", (err) => {
-    console.error("Peer error:", err);
-    let errorMsg = "Bağlantı hatası: ";
-    if (err.type === "peer-unavailable") {
-      errorMsg = "Oda bulunamadı. Kod doğru mu kontrol edin.";
-    } else if (err.type === "network") {
-      errorMsg = "Ağ bağlantı hatası. İnternet bağlantınızı kontrol edin.";
-    } else if (err.type === "server-error") {
-      errorMsg = "Sunucu hatası. Lütfen birkaç saniye sonra tekrar deneyin.";
-    } else {
-      errorMsg += err.type;
+      return;
     }
-    alert(errorMsg);
+    
+    // Oyuna katıl
+    await currentRoomRef.child('player2').update({
+      connected: true,
+      currentRow: 0
+    });
+    
+    // Oyun verilerini al
+    secretWord = roomData.secretWord;
+    currentTurn = roomData.currentTurn;
+    lockedPositions = roomData.lockedPositions || [false, false, false, false, false];
+    
+    console.log("Odaya katılındı:", roomCode);
+    
+    // Oyun verilerini dinle
+    listenToGameUpdates();
+    
+    // Oyunu başlat
+    startOnlineGame();
+    
+  } catch (error) {
+    console.error("Odaya katılma hatası:", error);
+    alert("Odaya katılılamadı: " + error.message);
     document.querySelector(".online-buttons").style.display = "block";
     joinForm.style.display = "none";
-  });
+  }
 }
 
-// Bağlantıyı kur ve mesajlaşmayı ayarla
-function setupConnection() {
-  connection.on("open", () => {
-    statusText.textContent = "🟢 Bağlı";
-    opponentName.textContent = "Rakip: Hazır";
-    
-    // İlk veri gönder (senkronizasyon için)
-    if (myPlayerNumber === 1) {
-      sendData({
-        type: "sync",
-        secretWord: secretWord,
-        currentTurn: currentTurn
-      });
+// Oyun güncellemelerini dinle (Firebase)
+function listenToGameUpdates() {
+  if (!currentRoomRef) return;
+  
+  // Tahminleri dinle
+  const otherPlayer = myPlayerNumber === 1 ? "player2" : "player1";
+  
+  currentRoomRef.child(otherPlayer + '/lastGuess').on('value', (snapshot) => {
+    const guessData = snapshot.val();
+    if (guessData && guessData.timestamp > Date.now() - 5000) {
+      // Son 5 saniyede yapılan tahmin
+      applyOpponentGuess(guessData);
     }
   });
   
-  connection.on("data", (data) => {
-    handleReceivedData(data);
+  // Kilitli pozisyonları dinle
+  currentRoomRef.child('lockedPositions').on('value', (snapshot) => {
+    const positions = snapshot.val();
+    if (positions) {
+      lockedPositions = positions;
+      updateBoardsForTurn();
+    }
   });
   
-  connection.on("close", () => {
-    statusText.textContent = "🔴 Bağlantı Kesildi";
-    opponentName.textContent = "Rakip: Ayrıldı";
-    alert("Rakip bağlantıyı kesti.");
+  // Sıra değişimini dinle
+  currentRoomRef.child('currentTurn').on('value', (snapshot) => {
+    const turn = snapshot.val();
+    if (turn) {
+      currentTurn = turn;
+      updateBoardsForTurn();
+    }
   });
   
-  connection.on("error", (err) => {
-    console.error("Connection error:", err);
+  // Oyun bitişini dinle
+  currentRoomRef.child('winner').on('value', (snapshot) => {
+    const winner = snapshot.val();
+    if (winner && !gameOver) {
+      handleOnlineGameEnd(winner);
+    }
+  });
+  
+  // Bağlantı durumunu dinle
+  currentRoomRef.child(otherPlayer + '/connected').on('value', (snapshot) => {
+    if (snapshot.val() === false && isOnlineMode) {
+      statusText.textContent = "🔴 Bağlantı Kesildi";
+      opponentName.textContent = "Rakip: Ayrıldı";
+      alert("Rakip oyundan ayrıldı.");
+    } else if (snapshot.val() === true) {
+      statusText.textContent = "🟢 Bağlı";
+      opponentName.textContent = "Rakip: Hazır";
+    }
   });
 }
 
@@ -896,66 +916,86 @@ function startOnlineGame() {
   }
 }
 
-// Veri gönder
-function sendData(data) {
-  if (connection && connection.open) {
-    connection.send(data);
+// Firebase'e tahmin gönder
+async function sendGuess(playerName, guess, result, newCurrentRow) {
+  if (!currentRoomRef) return;
+  
+  try {
+    const updates = {};
+    updates[playerName + '/lastGuess'] = {
+      guess: guess,
+      result: result,
+      currentRow: newCurrentRow,
+      timestamp: Date.now()
+    };
+    updates[playerName + '/currentRow'] = newCurrentRow;
+    updates['lockedPositions'] = lockedPositions;
+    updates['currentTurn'] = currentTurn;
+    
+    await currentRoomRef.update(updates);
+  } catch (error) {
+    console.error("Tahmin gönderme hatası:", error);
   }
 }
 
-// Gelen veriyi işle
-function handleReceivedData(data) {
-  switch (data.type) {
-    case "sync":
-      // Oyun başlangıç senkronizasyonu
-      secretWord = data.secretWord;
-      currentTurn = data.currentTurn;
-      resetGame(true); // Kelimeyi değiştirme
-      break;
-      
-    case "guess":
-      // Rakip tahmin yaptı
-      const { playerName, guess, result, newLockedPositions, newCurrentRow } = data;
-      
-      // Diğer oyuncunun tahminini güncelle
-      if (playerName === "player1" && myPlayerNumber === 2) {
-        // Rakip oyuncu 1
-        currentRow1 = newCurrentRow - 1;
-        applyGuessToBoard(gridInputs1, currentRow1, guess, result);
-        currentRow1 = newCurrentRow;
-      } else if (playerName === "player2" && myPlayerNumber === 1) {
-        // Rakip oyuncu 2
-        currentRow2 = newCurrentRow - 1;
-        applyGuessToBoard(gridInputs2, currentRow2, guess, result);
-        currentRow2 = newCurrentRow;
-      }
-      
-      // Kilitli pozisyonları güncelle
-      lockedPositions = newLockedPositions;
-      currentTurn = data.newTurn;
-      
-      // Kazanan kontrolü
-      if (data.winner) {
-        handleOpponentWin(playerName);
-      }
-      
-      updateBoardsForTurn();
-      break;
-      
-    case "reset":
-      // Rakip yeniden başlattı
-      secretWord = data.secretWord;
-      currentTurn = data.currentTurn;
-      resetGame(true);
-      break;
+// Firebase'e kazanma durumu gönder
+async function sendWin(playerName) {
+  if (!currentRoomRef) return;
+  
+  try {
+    await currentRoomRef.update({
+      winner: playerName,
+      gameOver: true
+    });
+  } catch (error) {
+    console.error("Kazanma durumu gönderme hatası:", error);
+  }
+}
+
+// Rakibin tahminini uygula
+function applyOpponentGuess(guessData) {
+  const otherPlayer = myPlayerNumber === 1 ? "player2" : "player1";
+  const otherGridInputs = myPlayerNumber === 1 ? gridInputs2 : gridInputs1;
+  const rowIndex = guessData.currentRow - 1;
+  
+  if (rowIndex >= 0 && rowIndex < ROWS) {
+    applyGuessToBoard(otherGridInputs, rowIndex, guessData.guess, guessData.result);
+    
+    if (myPlayerNumber === 1) {
+      currentRow2 = guessData.currentRow;
+    } else {
+      currentRow1 = guessData.currentRow;
+    }
+  }
+}
+
+// Online oyun bitişi
+function handleOnlineGameEnd(winner) {
+  gameOver = true;
+  guessButton1.disabled = true;
+  guessButton2.disabled = true;
+  
+  if ((winner === "player1" && myPlayerNumber === 1) || (winner === "player2" && myPlayerNumber === 2)) {
+    messageEl1.textContent = myPlayerNumber === 1 ? "🎉 KAZANDIN! Kelime: " + secretWord : "";
+    messageEl2.textContent = myPlayerNumber === 2 ? "🎉 KAZANDIN! Kelime: " + secretWord : "";
+    const myMessageEl = myPlayerNumber === 1 ? messageEl1 : messageEl2;
+    myMessageEl.className = "message win";
+  } else {
+    const myMessageEl = myPlayerNumber === 1 ? messageEl1 : messageEl2;
+    myMessageEl.textContent = "😔 Kaybettin! Kelime: " + secretWord;
+    myMessageEl.className = "message lose";
   }
 }
 
 // Rakibin tahminini tahtaya uygula
 function applyGuessToBoard(gridInputs, rowIndex, guess, result) {
+  if (!gridInputs[rowIndex]) return;
+  
   for (let c = 0; c < COLS; c++) {
     const input = gridInputs[rowIndex][c];
-    input.value = guess[c];
+    if (!input) continue;
+    
+    input.value = guess[c] || '';
     input.classList.remove("correct", "present", "absent", "locked", "hint");
     
     if (result[c] === "correct") {
@@ -970,35 +1010,21 @@ function applyGuessToBoard(gridInputs, rowIndex, guess, result) {
   }
 }
 
-// Rakip kazandı
-function handleOpponentWin(playerName) {
-  gameOver = true;
-  guessButton1.disabled = true;
-  guessButton2.disabled = true;
+// Bağlantıyı kes (Firebase)
+async function disconnect() {
+  // Firebase bağlantısını temizle
+  if (currentRoomRef && myPlayerNumber) {
+    try {
+      const playerKey = myPlayerNumber === 1 ? 'player1' : 'player2';
+      await currentRoomRef.child(playerKey + '/connected').set(false);
+      currentRoomRef.off(); // Tüm dinleyicileri kapat
+    } catch (error) {
+      console.error("Bağlantı kesme hatası:", error);
+    }
+  }
   
-  if (playerName === "player1" && myPlayerNumber === 2) {
-    messageEl1.textContent = "🎉 KAZANDI! Kelime: " + secretWord;
-    messageEl1.className = "message win";
-    messageEl2.textContent = "😔 Kaybettin! Kelime: " + secretWord;
-    messageEl2.className = "message lose";
-  } else if (playerName === "player2" && myPlayerNumber === 1) {
-    messageEl2.textContent = "🎉 KAZANDI! Kelime: " + secretWord;
-    messageEl2.className = "message win";
-    messageEl1.textContent = "😔 Kaybettin! Kelime: " + secretWord;
-    messageEl1.className = "message lose";
-  }
-}
-
-// Bağlantıyı kes
-function disconnect() {
-  if (connection) {
-    connection.close();
-    connection = null;
-  }
-  if (peer) {
-    peer.destroy();
-    peer = null;
-  }
+  currentRoomRef = null;
+  currentRoomCode = null;
   
   // Bağlantı ekranına dön
   gameScreen.style.display = "none";
@@ -1039,15 +1065,25 @@ guessButton2.addEventListener("click", () => {
   }
 });
 
-resetButton.addEventListener("click", () => {
+resetButton.addEventListener("click", async () => {
   if (isOnlineMode && myPlayerNumber === 1) {
     // Sadece oda sahibi reset yapabilir
     resetGame();
-    sendData({
-      type: "reset",
-      secretWord: secretWord,
-      currentTurn: currentTurn
-    });
+    if (currentRoomRef) {
+      try {
+        await currentRoomRef.update({
+          secretWord: secretWord,
+          currentTurn: currentTurn,
+          lockedPositions: [false, false, false, false, false],
+          gameOver: false,
+          winner: null,
+          'player1/currentRow': 0,
+          'player2/currentRow': 0
+        });
+      } catch (error) {
+        console.error("Reset gönderme hatası:", error);
+      }
+    }
   } else if (isLocalMode) {
     resetGame();
   } else if (isOnlineMode && myPlayerNumber === 2) {
