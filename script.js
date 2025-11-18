@@ -32,6 +32,12 @@ const firebaseConfig = {
   measurementId: "G-0KV0ZC3XZF"
 };
 
+// Gemini API ayarları
+// ÖNEMLİ: Kendi API anahtarınızı buraya ekleyin
+// https://makersuite.google.com/app/apikey adresinden ücretsiz alabilirsiniz
+const GEMINI_API_KEY = "AIzaSyDdZtZLJG0x9bHG2G2AG1o1-ZPoIZTjzyc"; // Geçici - kendi anahtarınızı ekleyin
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+
 // Oyuncu 1
 let currentRow1 = 0;
 let firstLetterHintGiven1 = false;
@@ -109,6 +115,71 @@ function pickRandomWord() {
   }
   const index = Math.floor(Math.random() * WORDS.length);
   return turkishToUpper(WORDS[index]);
+}
+
+// Kelimenin listede olup olmadığını kontrol et
+function isValidWord(word) {
+  if (WORDS.length === 0) return true; // Kelimeler yüklenmediyse her şeye izin ver
+  
+  const upperWord = turkishToUpper(word);
+  
+  // WORDS dizisinde ara
+  return WORDS.some(w => turkishToUpper(w) === upperWord);
+}
+
+// Gemini API ile kelimenin anlamını al
+async function getWordMeaning(word) {
+  try {
+    const prompt = `"${word}" kelimesinin kısa ve öz Türkçe anlamını 1-2 cümle ile açıkla. Sadece anlamı ver, başka bilgi ekleme.`;
+    
+    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.4,
+          maxOutputTokens: 100,
+        }
+      })
+    });
+    
+    if (!response.ok) {
+      console.error('Gemini API hatası:', response.status);
+      return null;
+    }
+    
+    const data = await response.json();
+    const meaning = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    
+    return meaning || null;
+  } catch (error) {
+    console.error('Kelime anlamı alınamadı:', error);
+    return null;
+  }
+}
+
+// Kelime anlamını göster
+async function showWordMeaning(word, messageEl) {
+  messageEl.innerHTML += '<br><span style="color: #aaa; font-size: 12px;">Anlam yükleniyor...</span>';
+  
+  const meaning = await getWordMeaning(word);
+  
+  if (meaning) {
+    // Yükleniyor mesajını kaldır ve anlamı göster
+    const currentText = messageEl.textContent.replace('Anlam yükleniyor...', '');
+    messageEl.innerHTML = currentText + '<br><br><span style="color: #ffb74d; font-size: 13px;">📖 ' + meaning + '</span>';
+  } else {
+    // Anlam alınamazsa mesajı kaldır
+    const currentText = messageEl.textContent.replace('Anlam yükleniyor...', '');
+    messageEl.textContent = currentText;
+  }
 }
 
 function createBoard(boardEl, gridInputs, guessButton) {
@@ -450,12 +521,8 @@ function handleGuess(playerName, gridInputs, currentRow, messageEl, guessButton,
       messageEl.className = "message neutral";
       return;
     }
-  } else if (currentTurn !== playerName) {
-    // Lokal modda sıra kontrolü
-    messageEl.textContent = "Senin sıran değil!";
-    messageEl.className = "message neutral";
-    return;
   }
+  // Lokal modda sıra kontrolü yok (tek oyuncu)
 
   const guess = getGuessFromRow(gridInputs, currentRow);
 
@@ -467,6 +534,13 @@ function handleGuess(playerName, gridInputs, currentRow, messageEl, guessButton,
 
   if (guess.length !== COLS) {
     messageEl.textContent = "Kelime 5 harf olmalı.";
+    messageEl.className = "message";
+    return;
+  }
+
+  // Kelime listesinde var mı kontrol et
+  if (!isValidWord(guess)) {
+    messageEl.textContent = "Bu kelime listede yok!";
     messageEl.className = "message";
     return;
   }
@@ -485,8 +559,18 @@ function handleGuess(playerName, gridInputs, currentRow, messageEl, guessButton,
     
     // Diğer oyuncuya kaybettiğini göster
     const otherMessageEl = playerName === "player1" ? messageEl2 : messageEl1;
-    otherMessageEl.textContent = "😔 Kaybettin! Kelime: " + secretWord;
-    otherMessageEl.className = "message lose";
+    if (otherMessageEl) {
+      otherMessageEl.textContent = "😔 Kaybettin! Kelime: " + secretWord;
+      otherMessageEl.className = "message lose";
+    }
+    
+    // Kelimenin anlamını göster (kazanan için)
+    showWordMeaning(secretWord, messageEl);
+    
+    // Kaybeden için de anlamı göster
+    if (otherMessageEl) {
+      showWordMeaning(secretWord, otherMessageEl);
+    }
     
     // Online modda rakibe bildir
     if (isOnlineMode) {
@@ -499,18 +583,31 @@ function handleGuess(playerName, gridInputs, currentRow, messageEl, guessButton,
 
   currentRow++;
   if (currentRow >= ROWS) {
-    messageEl.textContent = "Tahmin hakkın bitti.";
+    messageEl.textContent = "Tahmin hakkın bitti. Kelime: " + secretWord;
     messageEl.className = "message neutral";
     guessButton.disabled = true;
+    
+    // Lokal modda veya tek oyuncuysa anlamı göster
+    if (isLocalMode) {
+      showWordMeaning(secretWord, messageEl);
+    }
     
     // İki oyuncu da tahminlerini tükettiyse oyun biter
     if ((playerName === "player1" && currentRow2 >= ROWS) || 
         (playerName === "player2" && currentRow1 >= ROWS)) {
       gameOver = true;
-      messageEl1.textContent = "Berabere! Kelime: " + secretWord;
-      messageEl1.className = "message neutral";
-      messageEl2.textContent = "Berabere! Kelime: " + secretWord;
-      messageEl2.className = "message neutral";
+      if (messageEl1) {
+        messageEl1.textContent = "Berabere! Kelime: " + secretWord;
+        messageEl1.className = "message neutral";
+        // Anlamı göster
+        showWordMeaning(secretWord, messageEl1);
+      }
+      if (messageEl2) {
+        messageEl2.textContent = "Berabere! Kelime: " + secretWord;
+        messageEl2.className = "message neutral";
+        // Anlamı göster
+        showWordMeaning(secretWord, messageEl2);
+      }
     } else {
       // Sıra diğer oyuncuya geçer
       currentTurn = playerName === "player1" ? "player2" : "player1";
@@ -565,11 +662,17 @@ function resetGame(skipWordSelection = false) {
   // Online modda kelime ve sıra kontrolü
   if (isOnlineMode && skipWordSelection) {
     // Oyuncu 2: Firebase'den gelen verileri kullan, YENİ KELİME SEÇME!
-    console.log("Online mod - mevcut kelime kullanılıyor:", secretWord);
+    console.log("Online mod - Firebase kelimesi kullanılıyor:", secretWord);
+    // ASLA YENİ KELİME SEÇME!
   } else if (!skipWordSelection) {
     // Lokal mod veya Oyuncu 1: Yeni kelime seç
-    secretWord = pickRandomWord();
-    currentTurn = Math.random() < 0.5 ? "player1" : "player2";
+    if (isLocalMode) {
+      secretWord = pickRandomWord();
+      currentTurn = "player1"; // Lokal modda tek oyuncu
+    } else {
+      secretWord = pickRandomWord();
+      currentTurn = Math.random() < 0.5 ? "player1" : "player2";
+    }
     console.log("Yeni kelime seçildi:", secretWord);
   }
   
@@ -593,20 +696,27 @@ function resetGame(skipWordSelection = false) {
   if (guessButton1) guessButton1.disabled = false;
   if (guessButton2) guessButton2.disabled = false;
 
-  createBoard(boardEl1, gridInputs1, guessButton1);
-  createBoard(boardEl2, gridInputs2, guessButton2);
+  // Lokal modda sadece board1 oluştur
+  if (isLocalMode) {
+    createBoard(boardEl1, gridInputs1, guessButton1);
+    currentRow1 = setActiveRow(gridInputs1, 0, 0, firstLetterHintGiven1, true);
+  } else {
+    // Online modda her iki board'u da oluştur
+    createBoard(boardEl1, gridInputs1, guessButton1);
+    createBoard(boardEl2, gridInputs2, guessButton2);
+    
+    // Her iki tahtayı da başlat
+    const isPlayer1Turn = currentTurn === "player1";
+    const isPlayer2Turn = currentTurn === "player2";
+    
+    currentRow1 = setActiveRow(gridInputs1, 0, 0, firstLetterHintGiven1, isPlayer1Turn);
+    currentRow2 = setActiveRow(gridInputs2, 0, 0, firstLetterHintGiven2, isPlayer2Turn);
+    
+    // Sıra durumunu güncelle
+    updateBoardsForTurn();
+  }
   
-  // Her iki tahtayı da başlat
-  const isPlayer1Turn = currentTurn === "player1";
-  const isPlayer2Turn = currentTurn === "player2";
-  
-  currentRow1 = setActiveRow(gridInputs1, 0, 0, firstLetterHintGiven1, isPlayer1Turn);
-  currentRow2 = setActiveRow(gridInputs2, 0, 0, firstLetterHintGiven2, isPlayer2Turn);
-  
-  // Sıra durumunu güncelle
-  updateBoardsForTurn();
-  
-  console.log("Reset tamamlandı - Kelime:", secretWord, "Sıra:", currentTurn);
+  console.log("Reset tamamlandı - Kelime:", secretWord, "Sıra:", currentTurn, "Mod:", isLocalMode ? "Lokal" : "Online");
 }
 
 // ======================
@@ -647,12 +757,16 @@ document.getElementById("localModeBtn").addEventListener("click", async () => {
   
   isLocalMode = true;
   isOnlineMode = false;
-  myPlayerNumber = 0; // Lokal modda her iki oyuncu da oynanabilir
+  myPlayerNumber = 0; // Lokal modda tek oyuncu
   connectionScreen.style.display = "none";
   gameScreen.style.display = "block";
   document.getElementById("connection-status").style.display = "none";
-  document.getElementById("player1Title").textContent = "Oyuncu 1";
-  document.getElementById("player2Title").textContent = "Oyuncu 2";
+  
+  // Lokal modda sadece tek board göster
+  document.getElementById("player1Section").style.display = "flex";
+  document.getElementById("player2Section").style.display = "none";
+  document.getElementById("player1Title").textContent = "Türkçe Wordl";
+  
   document.getElementById("disconnectBtn").style.display = "none";
   document.getElementById("backToMenuBtn").style.display = "inline-block";
   resetGame();
@@ -799,15 +913,15 @@ async function createRoom() {
     
     console.log("Oda oluşturuldu:", currentRoomCode);
     
+    // Oyun verilerini dinlemeye başla (Player1 için)
+    listenToGameUpdates();
+    
     // Player2'nin katılmasını bekle
     let hasPlayer2Joined = false;
     currentRoomRef.child('player2/connected').on('value', (snapshot) => {
       if (snapshot.val() === true && !hasPlayer2Joined) {
         hasPlayer2Joined = true;
         console.log("Oyuncu 2 katıldı!");
-        
-        // Oyun verilerini dinlemeye başla
-        listenToGameUpdates();
         
         // Oyunu başlat
         startOnlineGame();
@@ -858,22 +972,25 @@ async function joinRoom(roomCode) {
       currentRow: 0
     });
     
-    // Oyun verilerini al ve SAKLA
+    // Oyun verilerini al ve SAKLA - BU ÇOK ÖNEMLİ!
     secretWord = roomData.secretWord;
     currentTurn = roomData.currentTurn;
     lockedPositions = roomData.lockedPositions || [false, false, false, false, false];
     currentRow1 = roomData.player1?.currentRow || 0;
     currentRow2 = roomData.player2?.currentRow || 0;
     
+    console.log("========================================");
     console.log("Odaya katılındı:", roomCode);
-    console.log("Kelime Firebase'den alındı:", secretWord);
+    console.log("FIREBASE'DEN ALINAN KELİME:", secretWord);
     console.log("Başlangıç sırası:", currentTurn);
+    console.log("========================================");
     
-    // Oyun verilerini dinle
+    // ÖNCE oyun verilerini dinlemeye başla
     listenToGameUpdates();
     
-    // Oyunu başlat (board'ları oluştur)
-    startOnlineGame();
+    // SONRA oyunu başlat (board'ları oluştur)
+    // startOnlineGame içinde resetGame(true) çağrılacak ve secretWord DEĞİŞMEYECEK
+    await startOnlineGame();
     
   } catch (error) {
     console.error("Odaya katılma hatası:", error);
@@ -1013,10 +1130,15 @@ function listenToGameUpdates() {
 }
 
 // Online oyunu başlat
-function startOnlineGame() {
+async function startOnlineGame() {
   connectionScreen.style.display = "none";
   gameScreen.style.display = "block";
   document.getElementById("connection-status").style.display = "flex";
+  
+  // Online modda her iki board'u da göster
+  document.getElementById("player1Section").style.display = "flex";
+  document.getElementById("player2Section").style.display = "flex";
+  
   document.getElementById("player1Title").textContent = myPlayerNumber === 1 ? "Sen" : "Rakip";
   document.getElementById("player2Title").textContent = myPlayerNumber === 2 ? "Sen" : "Rakip";
   document.getElementById("disconnectBtn").style.display = "inline-block";
@@ -1026,8 +1148,23 @@ function startOnlineGame() {
   if (myPlayerNumber === 1) {
     // Oyun sahibi kelimeyi seçer ve board'u oluşturur
     resetGame();
+    console.log("Oyuncu 1 oyunu başlattı - Kelime:", secretWord);
   } else {
-    // Katılan oyuncu board'u oluşturur (kelime zaten Firebase'den alındı)
+    // Katılan oyuncu Firebase'den güncel verileri bir kez daha okuyor
+    try {
+      const snapshot = await currentRoomRef.once('value');
+      const roomData = snapshot.val();
+      if (roomData) {
+        secretWord = roomData.secretWord;
+        currentTurn = roomData.currentTurn;
+        lockedPositions = roomData.lockedPositions || [false, false, false, false, false];
+        console.log("Oyuncu 2 oyunu başlattı - Firebase'den kelime:", secretWord);
+      }
+    } catch (error) {
+      console.error("Veri okuma hatası:", error);
+    }
+    
+    // Board'u oluştur (kelime zaten Firebase'den alındı)
     resetGame(true); // skipWordSelection = true
   }
 }
@@ -1100,10 +1237,14 @@ function handleOnlineGameEnd(winnerPlayer) {
     if (myMessageEl) {
       myMessageEl.textContent = "🎉 KAZANDIN! Kelime: " + secretWord;
       myMessageEl.className = "message win";
+      // Anlamı göster
+      showWordMeaning(secretWord, myMessageEl);
     }
     if (otherMessageEl) {
       otherMessageEl.textContent = "😔 Kaybettin! Kelime: " + secretWord;
       otherMessageEl.className = "message lose";
+      // Anlamı göster
+      showWordMeaning(secretWord, otherMessageEl);
     }
   } else {
     // Rakip kazandı
@@ -1112,10 +1253,14 @@ function handleOnlineGameEnd(winnerPlayer) {
     if (myMessageEl) {
       myMessageEl.textContent = "😔 Kaybettin! Kelime: " + secretWord;
       myMessageEl.className = "message lose";
+      // Anlamı göster
+      showWordMeaning(secretWord, myMessageEl);
     }
     if (otherMessageEl) {
       otherMessageEl.textContent = "🎉 KAZANDI! Kelime: " + secretWord;
       otherMessageEl.className = "message win";
+      // Anlamı göster
+      showWordMeaning(secretWord, otherMessageEl);
     }
   }
 }
@@ -1183,17 +1328,18 @@ async function disconnect() {
 // ======================
 
 guessButton1.addEventListener("click", () => {
-  // Online modda sadece kendi sıramda ve kendi oyuncumda tahmin yapabilirim
-  if (isOnlineMode && myPlayerNumber !== 1) return;
-  if (isLocalMode || (isOnlineMode && myPlayerNumber === 1)) {
+  if (isLocalMode) {
+    // Lokal modda tek oyuncu
+    handleGuess("player1", gridInputs1, currentRow1, messageEl1, guessButton1, gridInputs2, currentRow2);
+  } else if (isOnlineMode && myPlayerNumber === 1) {
+    // Online modda sadece kendi oyuncum
     handleGuess("player1", gridInputs1, currentRow1, messageEl1, guessButton1, gridInputs2, currentRow2);
   }
 });
 
 guessButton2.addEventListener("click", () => {
-  // Online modda sadece kendi sıramda ve kendi oyuncumda tahmin yapabilirim
-  if (isOnlineMode && myPlayerNumber !== 2) return;
-  if (isLocalMode || (isOnlineMode && myPlayerNumber === 2)) {
+  // Lokal modda buton2 kullanılmıyor
+  if (isOnlineMode && myPlayerNumber === 2) {
     handleGuess("player2", gridInputs2, currentRow2, messageEl2, guessButton2, gridInputs1, currentRow1);
   }
 });
