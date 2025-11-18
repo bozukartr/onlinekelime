@@ -199,9 +199,9 @@ async function showWordMeaning(word, messageEl) {
     return;
   }
   
-  // Mevcut mesajı al
-  const currentMessage = messageEl.innerHTML;
-  messageEl.innerHTML = currentMessage + '<br><span style="color: #aaa; font-size: 12px;">Anlam yükleniyor...</span>';
+  // Mevcut mesajı al (textContent kullan, daha güvenli)
+  const currentMessage = messageEl.textContent;
+  messageEl.textContent = currentMessage + '\n\nAnlam yükleniyor...';
   
   const meaning = await getWordMeaning(word);
   
@@ -209,11 +209,12 @@ async function showWordMeaning(word, messageEl) {
   
   if (meaning) {
     // Yükleniyor mesajını kaldır ve anlamı göster
-    messageEl.innerHTML = currentMessage + '<br><br><span style="color: #ffb74d; font-size: 13px; line-height: 1.6;">📖 ' + meaning + '</span>';
+    // textContent kullanarak mobil uyumluluk sağla
+    messageEl.textContent = currentMessage + '\n\n📖 ' + meaning;
     console.log('Anlam gösterildi');
   } else {
     // Anlam alınamazsa yükleniyor mesajını kaldır
-    messageEl.innerHTML = currentMessage;
+    messageEl.textContent = currentMessage;
     console.log('Anlam alınamadı, mesaj kaldırıldı');
   }
 }
@@ -1405,8 +1406,23 @@ guessButton2.addEventListener("click", () => {
 
 resetButton.addEventListener("click", async () => {
   if (isOnlineMode && myPlayerNumber === 1) {
-    // Sadece oda sahibi reset yapabilir
-    resetGame();
+    // Sadece oda sahibi reset yapabilir - YENİ KELİME SEÇ!
+    const newWord = pickRandomWord();
+    const newTurn = Math.random() < 0.5 ? "player1" : "player2";
+    
+    console.log("========================================");
+    console.log("YENİ OYUN BAŞLATILIYOR (Reset)");
+    console.log("Yeni kelime:", newWord);
+    console.log("Eski kelime:", secretWord);
+    console.log("========================================");
+    
+    secretWord = newWord;
+    currentTurn = newTurn;
+    
+    // Board'u yeniden oluştur
+    resetGame(true); // Kelime zaten yukarıda seçildi
+    
+    // Firebase'e yeni oyun verilerini gönder
     if (currentRoomRef) {
       try {
         await currentRoomRef.update({
@@ -1420,7 +1436,7 @@ resetButton.addEventListener("click", async () => {
           'player1/lastGuess': null,
           'player2/lastGuess': null
         });
-        console.log("Oyun yeniden başlatıldı");
+        console.log("Firebase güncellendi - Yeni kelime:", secretWord);
       } catch (error) {
         console.error("Reset gönderme hatası:", error);
       }
