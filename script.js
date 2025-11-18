@@ -146,7 +146,7 @@ async function getWordMeaning(word) {
       }],
       generationConfig: {
         temperature: 0.4,
-        maxOutputTokens: 200,
+        maxOutputTokens: 300,
         responseMimeType: "text/plain"
       },
       // Gemini 2.5 için thinking mode'u kapat
