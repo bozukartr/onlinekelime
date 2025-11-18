@@ -781,13 +781,17 @@ async function createRoom() {
     
     console.log("Oda oluşturuldu:", currentRoomCode);
     
-    // Önce oyun verilerini dinlemeye başla
-    listenToGameUpdates();
-    
     // Player2'nin katılmasını bekle
+    let hasPlayer2Joined = false;
     currentRoomRef.child('player2/connected').on('value', (snapshot) => {
-      if (snapshot.val() === true) {
+      if (snapshot.val() === true && !hasPlayer2Joined) {
+        hasPlayer2Joined = true;
         console.log("Oyuncu 2 katıldı!");
+        
+        // Oyun verilerini dinlemeye başla
+        listenToGameUpdates();
+        
+        // Oyunu başlat
         startOnlineGame();
       }
     });
@@ -899,23 +903,28 @@ function listenToGameUpdates() {
   });
   
   // Bağlantı durumunu dinle
-  let isFirstConnection = true;
+  let hasSeenOpponentConnected = false;
   currentRoomRef.child(otherPlayer + '/connected').on('value', (snapshot) => {
-    // İlk yüklemede uyarı gösterme
-    if (isFirstConnection) {
-      isFirstConnection = false;
-      if (snapshot.val() === true) {
+    const isConnected = snapshot.val();
+    
+    // Rakip hiç bağlanmadıysa (ilk yüklemede false) uyarı gösterme
+    if (!hasSeenOpponentConnected) {
+      if (isConnected === true) {
+        hasSeenOpponentConnected = true;
         statusText.textContent = "🟢 Bağlı";
         opponentName.textContent = "Rakip: Hazır";
       }
+      // İlk yüklemede false ise sadece logla, uyarı gösterme
       return;
     }
     
-    if (snapshot.val() === false && isOnlineMode) {
+    // Rakip daha önce bağlandıysa ve şimdi ayrıldıysa uyar
+    if (isConnected === false && isOnlineMode && hasSeenOpponentConnected) {
       statusText.textContent = "🔴 Bağlantı Kesildi";
       opponentName.textContent = "Rakip: Ayrıldı";
       alert("Rakip oyundan ayrıldı.");
-    } else if (snapshot.val() === true) {
+    } else if (isConnected === true) {
+      hasSeenOpponentConnected = true;
       statusText.textContent = "🟢 Bağlı";
       opponentName.textContent = "Rakip: Hazır";
     }
