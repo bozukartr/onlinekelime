@@ -1,0 +1,39 @@
+{
+  "rules": {
+    "rooms": {
+      "$roomId": {
+        ".read": true,
+        ".write": true,
+        ".indexOn": ["createdAt"],
+        
+        "player1": {
+          ".validate": "newData.hasChildren(['connected', 'currentRow'])"
+        },
+        "player2": {
+          ".validate": "newData.hasChildren(['connected', 'currentRow'])"
+        },
+        
+        "secretWord": {
+          ".validate": "newData.isString() && newData.val().length == 5"
+        },
+        
+        "currentTurn": {
+          ".validate": "newData.val() == 'player1' || newData.val() == 'player2'"
+        },
+        
+        "lockedPositions": {
+          ".validate": "newData.hasChildren()"
+        },
+        
+        "gameOver": {
+          ".validate": "newData.isBoolean()"
+        },
+        
+        "winner": {
+          ".validate": "newData.val() == null || newData.val() == 'player1' || newData.val() == 'player2'"
+        }
+      }
+    }
+  }
+}
+

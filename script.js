@@ -332,6 +332,11 @@ function updateOtherPlayerBoard(gridInputs, currentRow, isCurrentPlayer) {
 
 // Sıra değiştiğinde tüm tahtaları güncelle
 function updateBoardsForTurn() {
+  // Tahtalar hazır değilse işlem yapma
+  if (gridInputs1.length === 0 || gridInputs2.length === 0) {
+    return;
+  }
+  
   const isPlayer1Turn = currentTurn === "player1";
   const isPlayer2Turn = currentTurn === "player2";
   
@@ -366,52 +371,58 @@ function updateBoardsForTurn() {
   }
   
   // Butonları güncelle
-  guessButton1.disabled = !isPlayer1Turn || gameOver;
-  guessButton2.disabled = !isPlayer2Turn || gameOver;
+  if (guessButton1) guessButton1.disabled = !isPlayer1Turn || gameOver;
+  if (guessButton2) guessButton2.disabled = !isPlayer2Turn || gameOver;
   
   // Oyuncu bölümlerine görsel efekt ekle
-  const player1Section = boardEl1.parentElement;
-  const player2Section = boardEl2.parentElement;
+  const player1Section = boardEl1 ? boardEl1.parentElement : null;
+  const player2Section = boardEl2 ? boardEl2.parentElement : null;
   
-  if (isPlayer1Turn) {
-    player1Section.classList.add("active");
-    player2Section.classList.remove("active");
-  } else {
-    player2Section.classList.add("active");
-    player1Section.classList.remove("active");
+  if (player1Section && player2Section) {
+    if (isPlayer1Turn) {
+      player1Section.classList.add("active");
+      player2Section.classList.remove("active");
+    } else {
+      player2Section.classList.add("active");
+      player1Section.classList.remove("active");
+    }
   }
   
   // Sıra mesajlarını göster
   if (!gameOver) {
     if (isPlayer1Turn && currentRow1 < ROWS) {
-      messageEl1.textContent = "Senin sıran! ⏰";
-      messageEl1.className = "message neutral";
-      if (currentRow2 < ROWS) {
+      if (messageEl1) {
+        messageEl1.textContent = "Senin sıran! ⏰";
+        messageEl1.className = "message neutral";
+      }
+      if (currentRow2 < ROWS && messageEl2) {
         messageEl2.textContent = "Rakip oynuyor...";
         messageEl2.className = "message neutral";
       }
     } else if (isPlayer2Turn && currentRow2 < ROWS) {
-      messageEl2.textContent = "Senin sıran! ⏰";
-      messageEl2.className = "message neutral";
-      if (currentRow1 < ROWS) {
+      if (messageEl2) {
+        messageEl2.textContent = "Senin sıran! ⏰";
+        messageEl2.className = "message neutral";
+      }
+      if (currentRow1 < ROWS && messageEl1) {
         messageEl1.textContent = "Rakip oynuyor...";
         messageEl1.className = "message neutral";
       }
     }
     
     // Sıra olan oyuncunun aktif kutusuna odaklan
-    if (isPlayer1Turn && currentRow1 < ROWS) {
+    if (isPlayer1Turn && currentRow1 < ROWS && gridInputs1[currentRow1]) {
       for (let c = 0; c < COLS; c++) {
         const input = gridInputs1[currentRow1][c];
-        if (!input.disabled) {
+        if (input && !input.disabled) {
           input.focus();
           break;
         }
       }
-    } else if (isPlayer2Turn && currentRow2 < ROWS) {
+    } else if (isPlayer2Turn && currentRow2 < ROWS && gridInputs2[currentRow2]) {
       for (let c = 0; c < COLS; c++) {
         const input = gridInputs2[currentRow2][c];
-        if (!input.disabled) {
+        if (input && !input.disabled) {
           input.focus();
           break;
         }
@@ -770,6 +781,9 @@ async function createRoom() {
     
     console.log("Oda oluşturuldu:", currentRoomCode);
     
+    // Önce oyun verilerini dinlemeye başla
+    listenToGameUpdates();
+    
     // Player2'nin katılmasını bekle
     currentRoomRef.child('player2/connected').on('value', (snapshot) => {
       if (snapshot.val() === true) {
@@ -777,9 +791,6 @@ async function createRoom() {
         startOnlineGame();
       }
     });
-    
-    // Oyun verilerini dinle
-    listenToGameUpdates();
     
   } catch (error) {
     console.error("Oda oluşturma hatası:", error);
