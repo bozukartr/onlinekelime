@@ -36,7 +36,7 @@ const firebaseConfig = {
 // ÖNEMLİ: Kendi API anahtarınızı buraya ekleyin
 // https://aistudio.google.com/app/apikey adresinden ücretsiz alabilirsiniz
 const GEMINI_API_KEY = "AIzaSyDdZtZLJG0x9bHG2G2AG1o1-ZPoIZTjzyc";
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 // Oyuncu 1
 let currentRow1 = 0;
@@ -145,7 +145,14 @@ async function getWordMeaning(word) {
       }],
       generationConfig: {
         temperature: 0.4,
-        maxOutputTokens: 100
+        maxOutputTokens: 200,
+        responseMimeType: "text/plain"
+      },
+      // Gemini 2.5 için thinking mode'u kapat
+      systemInstruction: {
+        parts: [{
+          text: "Kısa ve direkt cevap ver. Düşünme sürecini gösterme."
+        }]
       }
     };
     
@@ -164,13 +171,20 @@ async function getWordMeaning(word) {
     }
     
     const data = await response.json();
-    const meaning = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    console.log('Gemini API tam yanıtı:', JSON.stringify(data, null, 2));
     
-    if (meaning) {
-      console.log('Gemini yanıtı:', meaning);
-      return meaning.trim();
+    // Yanıtı parts array'inden al
+    const parts = data.candidates?.[0]?.content?.parts;
+    
+    if (parts && parts.length > 0) {
+      const meaning = parts[0]?.text;
+      if (meaning) {
+        console.log('Gemini yanıtı (anlam):', meaning);
+        return meaning.trim();
+      }
     }
     
+    console.log('Gemini yanıtında text bulunamadı');
     return null;
   } catch (error) {
     console.error('Kelime anlamı alınamadı:', error);
@@ -180,18 +194,27 @@ async function getWordMeaning(word) {
 
 // Kelime anlamını göster
 async function showWordMeaning(word, messageEl) {
-  messageEl.innerHTML += '<br><span style="color: #aaa; font-size: 12px;">Anlam yükleniyor...</span>';
+  if (!messageEl) {
+    console.log('messageEl undefined, anlam gösterilemiyor');
+    return;
+  }
+  
+  // Mevcut mesajı al
+  const currentMessage = messageEl.innerHTML;
+  messageEl.innerHTML = currentMessage + '<br><span style="color: #aaa; font-size: 12px;">Anlam yükleniyor...</span>';
   
   const meaning = await getWordMeaning(word);
   
+  console.log('Alınan anlam:', meaning);
+  
   if (meaning) {
     // Yükleniyor mesajını kaldır ve anlamı göster
-    const currentText = messageEl.textContent.replace('Anlam yükleniyor...', '');
-    messageEl.innerHTML = currentText + '<br><br><span style="color: #ffb74d; font-size: 13px;">📖 ' + meaning + '</span>';
+    messageEl.innerHTML = currentMessage + '<br><br><span style="color: #ffb74d; font-size: 13px; line-height: 1.6;">📖 ' + meaning + '</span>';
+    console.log('Anlam gösterildi');
   } else {
-    // Anlam alınamazsa mesajı kaldır
-    const currentText = messageEl.textContent.replace('Anlam yükleniyor...', '');
-    messageEl.textContent = currentText;
+    // Anlam alınamazsa yükleniyor mesajını kaldır
+    messageEl.innerHTML = currentMessage;
+    console.log('Anlam alınamadı, mesaj kaldırıldı');
   }
 }
 
