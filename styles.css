@@ -155,18 +155,23 @@ h1 {
   justify-content: center;
 }
 
-#resetButton {
+#resetButton, #newGameButton {
   padding: 12px 32px;
   font-size: 15px;
   border-radius: 8px;
   border: none;
   cursor: pointer;
-  background: #555;
-  color: #eee;
+  background: #4caf50;
+  color: #fff;
   font-weight: 600;
+  transition: background 0.3s ease;
 }
 
-#resetButton:active {
+#resetButton:hover, #newGameButton:hover {
+  background: #45a049;
+}
+
+#resetButton:active, #newGameButton:active {
   transform: scale(0.98);
 }
 

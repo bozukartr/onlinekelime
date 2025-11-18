@@ -55,6 +55,7 @@ const messageEl2 = document.getElementById("message2");
 const gridInputs2 = []; // [row][col]
 
 const resetButton = document.getElementById("resetButton");
+const newGameButton = document.getElementById("newGameButton");
 
 // UI Elementleri
 const connectionScreen = document.getElementById("connection-screen");
@@ -594,6 +595,9 @@ function handleGuess(playerName, gridInputs, currentRow, messageEl, guessButton,
     guessButton1.disabled = true;
     guessButton2.disabled = true;
     
+    // Yeni Oyun butonunu göster
+    showNewGameButton();
+    
     // Diğer oyuncuya kaybettiğini göster
     const otherMessageEl = playerName === "player1" ? messageEl2 : messageEl1;
     if (otherMessageEl) {
@@ -627,12 +631,15 @@ function handleGuess(playerName, gridInputs, currentRow, messageEl, guessButton,
     // Lokal modda veya tek oyuncuysa anlamı göster
     if (isLocalMode) {
       showWordMeaning(secretWord, messageEl);
+      showNewGameButton();
     }
     
     // İki oyuncu da tahminlerini tükettiyse oyun biter
     if ((playerName === "player1" && currentRow2 >= ROWS) || 
         (playerName === "player2" && currentRow1 >= ROWS)) {
       gameOver = true;
+      showNewGameButton();
+      
       if (messageEl1) {
         messageEl1.textContent = "Berabere! Kelime: " + secretWord;
         messageEl1.className = "message neutral";
@@ -695,11 +702,20 @@ function handleGuess(playerName, gridInputs, currentRow, messageEl, guessButton,
   updateBoardsForTurn();
 }
 
-function resetGame(skipWordSelection = false) {
-  console.log("resetGame çağrıldı - skipWordSelection:", skipWordSelection, "Mevcut kelime:", secretWord);
+function resetGame(skipWordSelection = false, forceNewWord = false) {
+  console.log("resetGame çağrıldı - skipWordSelection:", skipWordSelection, "forceNewWord:", forceNewWord, "Mevcut kelime:", secretWord);
   
   // Kelime seçimi
-  if (skipWordSelection) {
+  if (forceNewWord) {
+    // ZORLA YENİ KELİME SEÇ (Yeni Oyun butonu için)
+    secretWord = pickRandomWord();
+    if (isLocalMode) {
+      currentTurn = "player1";
+    } else {
+      currentTurn = Math.random() < 0.5 ? "player1" : "player2";
+    }
+    console.log(">>> ZORLA YENİ KELİME SEÇİLDİ:", secretWord);
+  } else if (skipWordSelection) {
     // MEVCUT KELİMEYİ KULLAN - HİÇBİR ŞEKLE DEĞİŞTİRME!
     console.log(">>> MEVCUT KELIME KORUNUYOR:", secretWord);
   } else {
@@ -720,6 +736,9 @@ function resetGame(skipWordSelection = false) {
       }
     }
   }
+  
+  // Yeni Oyun butonunu gizle, oyun başladı
+  hideNewGameButton();
   
   currentRow1 = 0;
   currentRow2 = 0;
@@ -1284,11 +1303,34 @@ function applyOpponentGuess(guessData) {
   }
 }
 
+// Yeni Oyun butonunu göster
+function showNewGameButton() {
+  if (newGameButton) {
+    newGameButton.style.display = "inline-block";
+  }
+  if (resetButton) {
+    resetButton.style.display = "none";
+  }
+}
+
+// Yeni Oyun butonunu gizle
+function hideNewGameButton() {
+  if (newGameButton) {
+    newGameButton.style.display = "none";
+  }
+  if (resetButton) {
+    resetButton.style.display = "none";
+  }
+}
+
 // Online oyun bitişi
 function handleOnlineGameEnd(winnerPlayer) {
   gameOver = true;
   if (guessButton1) guessButton1.disabled = true;
   if (guessButton2) guessButton2.disabled = true;
+  
+  // Yeni Oyun butonunu göster
+  showNewGameButton();
   
   if ((winnerPlayer === "player1" && myPlayerNumber === 1) || (winnerPlayer === "player2" && myPlayerNumber === 2)) {
     // Ben kazandım
@@ -1404,23 +1446,19 @@ guessButton2.addEventListener("click", () => {
   }
 });
 
-resetButton.addEventListener("click", async () => {
+// Yeni Oyun butonu (oyun bittiğinde)
+newGameButton.addEventListener("click", async () => {
   if (isOnlineMode && myPlayerNumber === 1) {
-    // Sadece oda sahibi reset yapabilir - YENİ KELİME SEÇ!
-    const newWord = pickRandomWord();
-    const newTurn = Math.random() < 0.5 ? "player1" : "player2";
-    
+    // Oda sahibi yeni oyun başlatır
     console.log("========================================");
-    console.log("YENİ OYUN BAŞLATILIYOR (Reset)");
-    console.log("Yeni kelime:", newWord);
+    console.log("YENİ OYUN BAŞLATILIYOR");
     console.log("Eski kelime:", secretWord);
+    
+    // Yeni kelime seç
+    resetGame(false, true); // forceNewWord = true
+    
+    console.log("Yeni kelime:", secretWord);
     console.log("========================================");
-    
-    secretWord = newWord;
-    currentTurn = newTurn;
-    
-    // Board'u yeniden oluştur
-    resetGame(true); // Kelime zaten yukarıda seçildi
     
     // Firebase'e yeni oyun verilerini gönder
     if (currentRoomRef) {
@@ -1442,9 +1480,10 @@ resetButton.addEventListener("click", async () => {
       }
     }
   } else if (isLocalMode) {
-    resetGame();
+    // Lokal modda yeni oyun
+    resetGame(false, true); // forceNewWord = true
   } else if (isOnlineMode && myPlayerNumber === 2) {
-    alert("Sadece oda sahibi oyunu yeniden başlatabilir.");
+    alert("Sadece oda sahibi yeni oyun başlatabilir.");
   }
 });
 
