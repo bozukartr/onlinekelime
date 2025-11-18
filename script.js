@@ -34,9 +34,9 @@ const firebaseConfig = {
 
 // Gemini API ayarları
 // ÖNEMLİ: Kendi API anahtarınızı buraya ekleyin
-// https://makersuite.google.com/app/apikey adresinden ücretsiz alabilirsiniz
-const GEMINI_API_KEY = "AIzaSyDdZtZLJG0x9bHG2G2AG1o1-ZPoIZTjzyc"; // Geçici - kendi anahtarınızı ekleyin
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+// https://aistudio.google.com/app/apikey adresinden ücretsiz alabilirsiniz
+const GEMINI_API_KEY = "AIzaSyDdZtZLJG0x9bHG2G2AG1o1-ZPoIZTjzyc";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent";
 
 // Oyuncu 1
 let currentRow1 = 0;
@@ -129,8 +129,13 @@ function isValidWord(word) {
 
 // Gemini API ile kelimenin anlamını al
 async function getWordMeaning(word) {
+  if (!GEMINI_API_KEY || GEMINI_API_KEY.includes("BURAYA")) {
+    console.log('Gemini API anahtarı ayarlanmamış');
+    return null;
+  }
+  
   try {
-    const prompt = `"${word}" kelimesinin kısa ve öz Türkçe anlamını 1-2 cümle ile açıkla. Sadece anlamı ver, başka bilgi ekleme.`;
+    const prompt = `"${word}" kelimesinin kısa ve öz Türkçe anlamını sadece 1 cümle ile açıkla. Ekstra bilgi ekleme, sadece anlamı ver.`;
     
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       method: 'POST',
@@ -144,21 +149,24 @@ async function getWordMeaning(word) {
           }]
         }],
         generationConfig: {
-          temperature: 0.4,
-          maxOutputTokens: 100,
+          temperature: 0.3,
+          maxOutputTokens: 80,
+          topP: 0.8,
+          topK: 40
         }
       })
     });
     
     if (!response.ok) {
-      console.error('Gemini API hatası:', response.status);
+      const errorData = await response.json();
+      console.error('Gemini API hatası:', response.status, errorData);
       return null;
     }
     
     const data = await response.json();
     const meaning = data.candidates?.[0]?.content?.parts?.[0]?.text;
     
-    return meaning || null;
+    return meaning ? meaning.trim() : null;
   } catch (error) {
     console.error('Kelime anlamı alınamadı:', error);
     return null;
