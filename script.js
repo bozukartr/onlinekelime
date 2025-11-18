@@ -665,9 +665,15 @@ document.getElementById("joinRoomBtn").addEventListener("click", () => {
 
 // Bağlan
 document.getElementById("connectBtn").addEventListener("click", () => {
-  const roomCode = roomCodeInput.value.trim().toUpperCase();
+  const roomCode = roomCodeInput.value.trim();
   if (roomCode) {
+    if (roomCode.length < 10) {
+      alert("Oda kodu çok kısa. Lütfen tam oda kodunu girin.");
+      return;
+    }
     joinRoom(roomCode);
+  } else {
+    alert("Lütfen oda kodunu girin.");
   }
 });
 
@@ -716,17 +722,34 @@ function createRoom() {
   isOnlineMode = true;
   myPlayerNumber = 1; // Oda sahibi Oyuncu 1
   
-  // PeerJS bağlantısı oluştur
-  peer = new Peer();
+  // PeerJS bağlantısı oluştur (alternatif sunucu ayarları ile)
+  try {
+    peer = new Peer({
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:global.stun.twilio.com:3478' }
+        ]
+      }
+    });
+  } catch (error) {
+    console.error("Peer oluşturma hatası:", error);
+    alert("Bağlantı başlatılamadı. Lütfen sayfayı yenileyin.");
+    return;
+  }
   
   peer.on("open", (id) => {
     myPeerId = id;
-    roomCodeDisplay.value = id.substring(0, 8).toUpperCase();
+    // Tüm ID'yi göster (daha güvenilir)
+    roomCodeDisplay.value = id;
     document.querySelector(".online-buttons").style.display = "none";
     roomInfo.style.display = "block";
     
+    console.log("Oda ID'si:", id);
+    
     // Diğer oyuncudan gelen bağlantıyı dinle
     peer.on("connection", (conn) => {
+      console.log("Yeni bağlantı alındı:", conn.peer);
       connection = conn;
       setupConnection();
       
@@ -739,7 +762,19 @@ function createRoom() {
   
   peer.on("error", (err) => {
     console.error("Peer error:", err);
-    alert("Bağlantı hatası: " + err.type);
+    let errorMsg = "Bağlantı hatası: ";
+    if (err.type === "unavailable-id") {
+      errorMsg = "Oda ID'si kullanılamıyor. Lütfen tekrar deneyin.";
+    } else if (err.type === "peer-unavailable") {
+      errorMsg = "Rakip bulunamadı. Oda kodu doğru mu?";
+    } else if (err.type === "network") {
+      errorMsg = "Ağ bağlantı hatası. İnternet bağlantınızı kontrol edin.";
+    } else if (err.type === "server-error") {
+      errorMsg = "Sunucu hatası. Lütfen birkaç saniye sonra tekrar deneyin.";
+    } else {
+      errorMsg += err.type;
+    }
+    alert(errorMsg);
   });
 }
 
@@ -748,25 +783,67 @@ function joinRoom(roomCode) {
   isOnlineMode = true;
   myPlayerNumber = 2; // Katılan oyuncu Oyuncu 2
   
-  // PeerJS bağlantısı oluştur
-  peer = new Peer();
+  // PeerJS bağlantısı oluştur (alternatif sunucu ayarları ile)
+  try {
+    peer = new Peer({
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:global.stun.twilio.com:3478' }
+        ]
+      }
+    });
+  } catch (error) {
+    console.error("Peer oluşturma hatası:", error);
+    alert("Bağlantı başlatılamadı. Lütfen sayfayı yenileyin.");
+    return;
+  }
   
   peer.on("open", () => {
-    // Oda sahibine bağlan
-    const fullPeerId = roomCode.toLowerCase() + peer.id.substring(8);
+    console.log("Bağlantı hazır, odaya katılınıyor:", roomCode);
     
-    // Alternatif: Direkt verilen kodu kullan
-    connection = peer.connect(roomCode.toLowerCase());
+    // Direkt verilen kodu kullan (tam ID)
+    connection = peer.connect(roomCode, {
+      reliable: true
+    });
+    
+    if (!connection) {
+      alert("Bağlantı oluşturulamadı. Oda kodu doğru mu?");
+      document.querySelector(".online-buttons").style.display = "block";
+      joinForm.style.display = "none";
+      return;
+    }
+    
     setupConnection();
     
-    setTimeout(() => {
-      startOnlineGame();
-    }, 500);
+    connection.on("open", () => {
+      console.log("Bağlantı başarılı!");
+      setTimeout(() => {
+        startOnlineGame();
+      }, 500);
+    });
+    
+    connection.on("error", (err) => {
+      console.error("Connection error:", err);
+      alert("Bağlantı hatası: " + err);
+      document.querySelector(".online-buttons").style.display = "block";
+      joinForm.style.display = "none";
+    });
   });
   
   peer.on("error", (err) => {
     console.error("Peer error:", err);
-    alert("Bağlantı hatası: Oda bulunamadı veya bağlantı kurulamadı.");
+    let errorMsg = "Bağlantı hatası: ";
+    if (err.type === "peer-unavailable") {
+      errorMsg = "Oda bulunamadı. Kod doğru mu kontrol edin.";
+    } else if (err.type === "network") {
+      errorMsg = "Ağ bağlantı hatası. İnternet bağlantınızı kontrol edin.";
+    } else if (err.type === "server-error") {
+      errorMsg = "Sunucu hatası. Lütfen birkaç saniye sonra tekrar deneyin.";
+    } else {
+      errorMsg += err.type;
+    }
+    alert(errorMsg);
     document.querySelector(".online-buttons").style.display = "block";
     joinForm.style.display = "none";
   });
