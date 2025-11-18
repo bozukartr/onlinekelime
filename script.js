@@ -316,15 +316,19 @@ function lockGreenPositions(result) {
 // Yeni yeşil harfler bulunduğunda diğer oyuncunun aktif satırını güncelle
 function updateOtherPlayerBoard(gridInputs, currentRow, isCurrentPlayer) {
   if (currentRow < 0 || currentRow >= ROWS) return;
+  if (!gridInputs[currentRow]) return;
   
   for (let c = 0; c < COLS; c++) {
     const input = gridInputs[currentRow][c];
+    if (!input) continue;
+    
     if (lockedPositions[c] && !input.classList.contains("hint")) {
       input.value = secretWord[c];
       input.disabled = true;
       input.classList.add("correct", "locked");
-    } else if (!lockedPositions[c]) {
-      // Sıra olmayan oyuncunun kutularını kapat
+      input.classList.remove("present", "absent");
+    } else if (!lockedPositions[c] && !input.classList.contains("hint")) {
+      // Sıra olmayan oyuncunun kutularını kapat, ama değerleri koru
       input.disabled = !isCurrentPlayer;
     }
   }
@@ -869,19 +873,58 @@ function listenToGameUpdates() {
   // Tahminleri dinle
   const otherPlayer = myPlayerNumber === 1 ? "player2" : "player1";
   
+  let lastProcessedTimestamp = 0;
   currentRoomRef.child(otherPlayer + '/lastGuess').on('value', (snapshot) => {
     const guessData = snapshot.val();
-    if (guessData && guessData.timestamp > Date.now() - 5000) {
-      // Son 5 saniyede yapılan tahmin
+    if (guessData && guessData.timestamp && guessData.timestamp > lastProcessedTimestamp) {
+      // Yeni tahmin geldi
+      lastProcessedTimestamp = guessData.timestamp;
       applyOpponentGuess(guessData);
+      console.log("Rakip tahmini uygulandı:", guessData);
     }
   });
+  
+  // Reset dinle (oyuncu 2 için)
+  if (myPlayerNumber === 2) {
+    currentRoomRef.on('value', (snapshot) => {
+      const roomData = snapshot.val();
+      if (roomData && roomData.gameOver === false && gameOver === true) {
+        // Oda sahibi reset yapmış
+        console.log("Oyun yeniden başlatıldı");
+        secretWord = roomData.secretWord;
+        currentTurn = roomData.currentTurn;
+        lockedPositions = roomData.lockedPositions || [false, false, false, false, false];
+        resetGame(true);
+      }
+    });
+  }
   
   // Kilitli pozisyonları dinle
   currentRoomRef.child('lockedPositions').on('value', (snapshot) => {
     const positions = snapshot.val();
     if (positions && gridInputs1.length > 0 && gridInputs2.length > 0) {
+      const oldLocked = [...lockedPositions];
       lockedPositions = positions;
+      
+      // Yeni kilitli harfler varsa her iki tahtayı da güncelle
+      for (let i = 0; i < COLS; i++) {
+        if (lockedPositions[i] && !oldLocked[i]) {
+          // Yeni yeşil harf bulundu, tahtaları güncelle
+          if (gridInputs1[currentRow1] && gridInputs1[currentRow1][i]) {
+            gridInputs1[currentRow1][i].value = secretWord[i];
+            gridInputs1[currentRow1][i].classList.add("correct", "locked");
+            gridInputs1[currentRow1][i].classList.remove("present", "absent");
+            gridInputs1[currentRow1][i].disabled = true;
+          }
+          if (gridInputs2[currentRow2] && gridInputs2[currentRow2][i]) {
+            gridInputs2[currentRow2][i].value = secretWord[i];
+            gridInputs2[currentRow2][i].classList.add("correct", "locked");
+            gridInputs2[currentRow2][i].classList.remove("present", "absent");
+            gridInputs2[currentRow2][i].disabled = true;
+          }
+        }
+      }
+      
       updateBoardsForTurn();
     }
   });
@@ -1006,20 +1049,35 @@ function applyOpponentGuess(guessData) {
 }
 
 // Online oyun bitişi
-function handleOnlineGameEnd(winner) {
+function handleOnlineGameEnd(winnerPlayer) {
   gameOver = true;
-  guessButton1.disabled = true;
-  guessButton2.disabled = true;
+  if (guessButton1) guessButton1.disabled = true;
+  if (guessButton2) guessButton2.disabled = true;
   
-  if ((winner === "player1" && myPlayerNumber === 1) || (winner === "player2" && myPlayerNumber === 2)) {
-    messageEl1.textContent = myPlayerNumber === 1 ? "🎉 KAZANDIN! Kelime: " + secretWord : "";
-    messageEl2.textContent = myPlayerNumber === 2 ? "🎉 KAZANDIN! Kelime: " + secretWord : "";
+  if ((winnerPlayer === "player1" && myPlayerNumber === 1) || (winnerPlayer === "player2" && myPlayerNumber === 2)) {
+    // Ben kazandım
     const myMessageEl = myPlayerNumber === 1 ? messageEl1 : messageEl2;
-    myMessageEl.className = "message win";
+    const otherMessageEl = myPlayerNumber === 1 ? messageEl2 : messageEl1;
+    if (myMessageEl) {
+      myMessageEl.textContent = "🎉 KAZANDIN! Kelime: " + secretWord;
+      myMessageEl.className = "message win";
+    }
+    if (otherMessageEl) {
+      otherMessageEl.textContent = "😔 Kaybettin! Kelime: " + secretWord;
+      otherMessageEl.className = "message lose";
+    }
   } else {
+    // Rakip kazandı
     const myMessageEl = myPlayerNumber === 1 ? messageEl1 : messageEl2;
-    myMessageEl.textContent = "😔 Kaybettin! Kelime: " + secretWord;
-    myMessageEl.className = "message lose";
+    const otherMessageEl = myPlayerNumber === 1 ? messageEl2 : messageEl1;
+    if (myMessageEl) {
+      myMessageEl.textContent = "😔 Kaybettin! Kelime: " + secretWord;
+      myMessageEl.className = "message lose";
+    }
+    if (otherMessageEl) {
+      otherMessageEl.textContent = "🎉 KAZANDI! Kelime: " + secretWord;
+      otherMessageEl.className = "message win";
+    }
   }
 }
 
@@ -1114,8 +1172,11 @@ resetButton.addEventListener("click", async () => {
           gameOver: false,
           winner: null,
           'player1/currentRow': 0,
-          'player2/currentRow': 0
+          'player2/currentRow': 0,
+          'player1/lastGuess': null,
+          'player2/lastGuess': null
         });
+        console.log("Oyun yeniden başlatıldı");
       } catch (error) {
         console.error("Reset gönderme hatası:", error);
       }
