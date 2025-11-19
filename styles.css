@@ -22,6 +22,102 @@ h1 {
   text-align: center;
 }
 
+/* Kullanıcı Profili */
+#user-profile {
+  width: 100%;
+  max-width: 800px;
+  margin-bottom: 16px;
+}
+
+.profile-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #1a1a1a;
+  border: 2px solid #333;
+  border-radius: 12px;
+}
+
+.user-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid #4caf50;
+}
+
+.user-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.user-info span:first-child {
+  font-weight: 600;
+  color: #fff;
+  font-size: 16px;
+}
+
+.coins {
+  color: #ffb74d;
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.logout-btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: transparent;
+  color: #aaa;
+  cursor: pointer;
+}
+
+.logout-btn:hover {
+  background: #222;
+  color: #eee;
+}
+
+/* Google Giriş */
+.google-login-btn {
+  width: 100%;
+  padding: 14px 20px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow 0.3s ease;
+  margin-bottom: 12px;
+}
+
+.google-login-btn:hover {
+  box-shadow: 0 2px 8px rgba(255,255,255,0.2);
+}
+
+.skip-login-btn {
+  width: 100%;
+  padding: 12px;
+  font-size: 14px;
+  border-radius: 8px;
+  border: 1px solid #444;
+  background: transparent;
+  color: #aaa;
+  cursor: pointer;
+}
+
+.skip-login-btn:hover {
+  background: #222;
+  color: #eee;
+}
+
 .subtitle {
   font-size: 13px;
   margin-bottom: 16px;
@@ -388,7 +484,6 @@ h1 {
   border-radius: 8px;
   margin-bottom: 16px;
   font-size: 14px;
-  flex-wrap: wrap;
 }
 
 #statusText {
@@ -396,19 +491,24 @@ h1 {
   font-weight: 600;
 }
 
-#timerText {
-  color: #ffb74d;
-  font-weight: 700;
-  font-size: 18px;
-  animation: pulse 1s ease-in-out infinite;
-  min-width: 60px;
-  text-align: center;
-  display: inline-block !important;
+.pass-button {
+  padding: 12px 24px;
+  font-size: 15px;
+  border-radius: 8px;
+  border: none;
+  background: #ff9800;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s ease;
 }
 
-#timerText.warning {
-  color: #ff5252;
-  animation: pulse 0.5s ease-in-out infinite;
+.pass-button:hover {
+  background: #f57c00;
+}
+
+.pass-button:active {
+  transform: scale(0.98);
 }
 
 #opponentName {

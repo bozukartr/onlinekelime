@@ -17,8 +17,11 @@ let myPlayerNumber = 1; // Ben hangi oyuncuyum (1 veya 2)
 
 // Firebase değişkenleri
 let database = null;
+let auth = null;
+let currentUser = null;
 let currentRoomRef = null;
 let currentRoomCode = null;
+let userCoins = 0;
 
 // Firebase yapılandırması (ücretsiz public demo)
 const firebaseConfig = {
@@ -66,13 +69,8 @@ const joinForm = document.getElementById("join-form");
 const roomCodeDisplay = document.getElementById("roomCodeDisplay");
 const roomCodeInput = document.getElementById("roomCodeInput");
 const statusText = document.getElementById("statusText");
-const timerText = document.getElementById("timerText");
 const opponentName = document.getElementById("opponentName");
-
-// Zamanlayıcı değişkenleri
-let turnTimer = null;
-let turnTimeRemaining = 30;
-const TURN_TIME_LIMIT = 30; // saniye
+const passButton = document.getElementById("passButton");
 
 // Kelime listesini words.txt dosyasından yükle
 async function loadWords() {
@@ -535,9 +533,9 @@ function updateBoardsForTurn() {
   const isPlayer1Turn = currentTurn === "player1";
   const isPlayer2Turn = currentTurn === "player2";
   
-  // Online modda zamanlayıcıyı başlat
+  // Online modda Pas Geç butonunu güncelle
   if (isOnlineMode && !gameOver) {
-    startTurnTimer();
+    updatePassButton();
   }
   
   // Oyuncu 1'in tahtasını güncelle
@@ -667,11 +665,6 @@ function handleGuess(playerName, gridInputs, currentRow, messageEl, guessButton,
     return;
   }
 
-  // Tahmin yapıldı, zamanlayıcıyı durdur
-  if (isOnlineMode) {
-    stopTurnTimer();
-  }
-  
   const result = evaluateGuess(guess);
   colourRow(gridInputs, currentRow, result);
   const hasNewLocks = lockGreenPositions(result);
@@ -833,9 +826,6 @@ function resetGame(skipWordSelection = false, forceNewWord = false) {
   // Yeni Oyun butonunu gizle, oyun başladı
   hideNewGameButton();
   
-  // Zamanlayıcıyı sıfırla
-  stopTurnTimer();
-  
   currentRow1 = 0;
   currentRow2 = 0;
   gameOver = false;
@@ -890,12 +880,181 @@ function initFirebase() {
       firebase.initializeApp(firebaseConfig);
     }
     database = firebase.database();
+    auth = firebase.auth();
     console.log('Firebase bağlantısı kuruldu.');
+    
+    // Auth durumunu dinle
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        currentUser = user;
+        console.log('Kullanıcı giriş yaptı:', user.displayName);
+        showUserProfile(user);
+        loadUserData(user.uid);
+      } else {
+        currentUser = null;
+        console.log('Kullanıcı çıkış yaptı');
+        hideUserProfile();
+      }
+    });
+    
     return true;
   } catch (error) {
     console.error('Firebase başlatılamadı:', error);
-    // Firebase olmadan lokal oyun hala çalışır
     return false;
+  }
+}
+
+// Google ile giriş yap
+async function loginWithGoogle() {
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({
+      prompt: 'select_account'
+    });
+    
+    const result = await auth.signInWithPopup(provider);
+    const user = result.user;
+    
+    console.log('Google girişi başarılı:', user.displayName);
+    
+    // Kullanıcı veritabanını oluştur/güncelle
+    await initializeUserData(user.uid, user.displayName, user.photoURL);
+    
+    // Mod seçim ekranına geç
+    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("mode-selection").style.display = "block";
+    
+  } catch (error) {
+    console.error('Google giriş hatası:', error);
+    alert('Giriş yapılamadı: ' + error.message);
+  }
+}
+
+// Kullanıcı verisini başlat
+async function initializeUserData(uid, displayName, photoURL) {
+  try {
+    const userRef = database.ref('users/' + uid);
+    const snapshot = await userRef.once('value');
+    
+    if (!snapshot.exists()) {
+      // Yeni kullanıcı, başlangıç verisi oluştur
+      await userRef.set({
+        displayName: displayName,
+        photoURL: photoURL,
+        coins: 0,
+        gamesPlayed: 0,
+        gamesWon: 0,
+        createdAt: Date.now()
+      });
+      console.log('Yeni kullanıcı oluşturuldu');
+    } else {
+      // Mevcut kullanıcı, profil bilgilerini güncelle
+      await userRef.update({
+        displayName: displayName,
+        photoURL: photoURL,
+        lastLogin: Date.now()
+      });
+    }
+  } catch (error) {
+    console.error('Kullanıcı verisi başlatma hatası:', error);
+  }
+}
+
+// Kullanıcı verisini yükle
+async function loadUserData(uid) {
+  try {
+    const userRef = database.ref('users/' + uid);
+    const snapshot = await userRef.once('value');
+    const userData = snapshot.val();
+    
+    if (userData) {
+      userCoins = userData.coins || 0;
+      updateCoinsDisplay();
+      console.log('Kullanıcı verisi yüklendi - Altın:', userCoins);
+    }
+  } catch (error) {
+    console.error('Kullanıcı verisi yükleme hatası:', error);
+  }
+}
+
+// Altın ekle
+async function addCoins(amount) {
+  if (!currentUser) {
+    console.log('Kullanıcı giriş yapmamış, altın eklenemiyor');
+    return;
+  }
+  
+  try {
+    const userRef = database.ref('users/' + currentUser.uid);
+    userCoins += amount;
+    
+    await userRef.update({
+      coins: userCoins
+    });
+    
+    updateCoinsDisplay();
+    console.log('Altın eklendi:', amount, 'Toplam:', userCoins);
+    
+    // Altın kazanma animasyonu
+    showCoinAnimation(amount);
+  } catch (error) {
+    console.error('Altın ekleme hatası:', error);
+  }
+}
+
+// Altın animasyonu göster
+function showCoinAnimation(amount) {
+  const coinsEl = document.getElementById("userCoins");
+  if (!coinsEl) return;
+  
+  coinsEl.style.transform = "scale(1.3)";
+  coinsEl.style.color = "#ffd700";
+  
+  setTimeout(() => {
+    coinsEl.style.transform = "scale(1)";
+    coinsEl.style.color = "#ffb74d";
+  }, 300);
+}
+
+// Altın göstergesini güncelle
+function updateCoinsDisplay() {
+  const coinsEl = document.getElementById("userCoins");
+  if (coinsEl) {
+    coinsEl.textContent = "💰 " + userCoins;
+  }
+}
+
+// Kullanıcı profilini göster
+function showUserProfile(user) {
+  const profileEl = document.getElementById("user-profile");
+  const avatarEl = document.getElementById("userAvatar");
+  const nameEl = document.getElementById("userName");
+  
+  if (profileEl) profileEl.style.display = "block";
+  if (avatarEl) avatarEl.src = user.photoURL || "https://via.placeholder.com/48";
+  if (nameEl) nameEl.textContent = user.displayName || "Oyuncu";
+  
+  updateCoinsDisplay();
+}
+
+// Kullanıcı profilini gizle
+function hideUserProfile() {
+  const profileEl = document.getElementById("user-profile");
+  if (profileEl) profileEl.style.display = "none";
+}
+
+// Çıkış yap
+async function logout() {
+  try {
+    await auth.signOut();
+    console.log('Çıkış yapıldı');
+    
+    // Giriş ekranına dön
+    document.getElementById("login-screen").style.display = "block";
+    document.getElementById("mode-selection").style.display = "none";
+    hideUserProfile();
+  } catch (error) {
+    console.error('Çıkış hatası:', error);
   }
 }
 
@@ -907,6 +1066,23 @@ async function initGame() {
   }
   initFirebase();
 }
+
+// Google giriş butonu
+document.getElementById("googleLoginBtn").addEventListener("click", () => {
+  loginWithGoogle();
+});
+
+// Misafir olarak devam et
+document.getElementById("skipLoginBtn").addEventListener("click", () => {
+  document.getElementById("login-screen").style.display = "none";
+  document.getElementById("mode-selection").style.display = "block";
+  console.log('Misafir olarak devam edildi');
+});
+
+// Çıkış butonu
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  logout();
+});
 
 // Lokal mod başlat
 document.getElementById("localModeBtn").addEventListener("click", async () => {
@@ -930,8 +1106,8 @@ document.getElementById("localModeBtn").addEventListener("click", async () => {
   document.getElementById("disconnectBtn").style.display = "none";
   document.getElementById("backToMenuBtn").style.display = "inline-block";
   
-  // Zamanlayıcıyı gizle (lokal modda yok)
-  if (timerText) timerText.style.display = "none";
+  // Pas Geç butonunu gizle (lokal modda yok)
+  if (passButton) passButton.style.display = "none";
   
   resetGame();
 });
@@ -1428,85 +1604,43 @@ function applyOpponentGuess(guessData) {
   }
 }
 
-// Zamanlayıcıyı başlat
-function startTurnTimer() {
-  // Sadece online modda ve kendi sıramda
-  if (!isOnlineMode) {
-    if (timerText) timerText.style.display = "none";
+// Pas Geç butonunu göster/gizle
+function updatePassButton() {
+  if (!isOnlineMode || gameOver) {
+    if (passButton) passButton.style.display = "none";
     return;
   }
   
   const isMyTurn = (currentTurn === "player1" && myPlayerNumber === 1) || 
                    (currentTurn === "player2" && myPlayerNumber === 2);
   
-  console.log("startTurnTimer çağrıldı - isMyTurn:", isMyTurn, "currentTurn:", currentTurn, "myPlayerNumber:", myPlayerNumber);
+  if (passButton) {
+    passButton.style.display = isMyTurn ? "inline-block" : "none";
+  }
+}
+
+// Pas Geç fonksiyonu
+async function handlePass() {
+  if (!isOnlineMode || gameOver) return;
+  
+  const isMyTurn = (currentTurn === "player1" && myPlayerNumber === 1) || 
+                   (currentTurn === "player2" && myPlayerNumber === 2);
   
   if (!isMyTurn) {
-    // Sıram değilse zamanlayıcıyı gizle
-    if (timerText) {
-      timerText.style.display = "none";
-      console.log("Zamanlayıcı gizlendi (sıram değil)");
-    }
+    alert("Senin sıran değil!");
     return;
   }
   
-  // Önceki zamanlayıcıyı temizle
-  if (turnTimer) {
-    clearInterval(turnTimer);
-  }
-  
-  turnTimeRemaining = TURN_TIME_LIMIT;
-  if (timerText) {
-    timerText.style.display = "inline-block";
-    timerText.style.visibility = "visible";
-    timerText.textContent = "⏱️ " + turnTimeRemaining;
-    timerText.classList.remove("warning");
-    console.log("Zamanlayıcı başlatıldı:", turnTimeRemaining);
-  }
-  
-  turnTimer = setInterval(() => {
-    turnTimeRemaining--;
-    
-    if (timerText) {
-      timerText.textContent = "⏱️ " + turnTimeRemaining;
-      
-      // Son 10 saniyede kırmızı yap
-      if (turnTimeRemaining <= 10) {
-        timerText.classList.add("warning");
-      }
-    }
-    
-    // Süre doldu
-    if (turnTimeRemaining <= 0) {
-      clearInterval(turnTimer);
-      handleTimeOut();
-    }
-  }, 1000);
-}
-
-// Zamanlayıcıyı durdur
-function stopTurnTimer() {
-  if (turnTimer) {
-    clearInterval(turnTimer);
-    turnTimer = null;
-  }
-  if (timerText) {
-    timerText.style.display = "none";
-  }
-}
-
-// Süre dolduğunda
-function handleTimeOut() {
-  console.log("Süre doldu! Sıra geçiyor...");
+  console.log("Pas geçildi");
   
   const myMessageEl = myPlayerNumber === 1 ? messageEl1 : messageEl2;
   if (myMessageEl) {
-    myMessageEl.textContent = "⏰ Süre doldu! Sıra geçti.";
+    myMessageEl.textContent = "⏭️ Pas geçtin!";
     myMessageEl.className = "message neutral";
     
     // 2 saniye sonra mesajı temizle
     setTimeout(() => {
-      if (myMessageEl && myMessageEl.textContent.includes("Süre doldu")) {
+      if (myMessageEl && myMessageEl.textContent.includes("Pas geçtin")) {
         myMessageEl.textContent = "";
       }
     }, 2000);
@@ -1518,9 +1652,14 @@ function handleTimeOut() {
   
   // Firebase'e güncellemeyi gönder
   if (currentRoomRef) {
-    currentRoomRef.update({
-      currentTurn: currentTurn
-    }).catch(err => console.error("Sıra geçiş hatası:", err));
+    try {
+      await currentRoomRef.update({
+        currentTurn: currentTurn
+      });
+      console.log("Sıra geçti:", currentTurn);
+    } catch (err) {
+      console.error("Sıra geçiş hatası:", err);
+    }
   }
   
   updateBoardsForTurn();
@@ -1534,7 +1673,9 @@ function showNewGameButton() {
   if (resetButton) {
     resetButton.style.display = "none";
   }
-  stopTurnTimer(); // Oyun bitince zamanlayıcıyı durdur
+  if (passButton) {
+    passButton.style.display = "none";
+  }
 }
 
 // Yeni Oyun butonunu gizle
@@ -1611,9 +1752,6 @@ function applyGuessToBoard(gridInputs, rowIndex, guess, result) {
 
 // Bağlantıyı kes (Firebase)
 async function disconnect() {
-  // Zamanlayıcıyı durdur
-  stopTurnTimer();
-  
   // Firebase bağlantısını temizle
   if (currentRoomRef && myPlayerNumber) {
     try {
@@ -1666,6 +1804,31 @@ guessButton2.addEventListener("click", () => {
   if (isOnlineMode && myPlayerNumber === 2) {
     handleGuess("player2", gridInputs2, currentRow2, messageEl2, guessButton2, gridInputs1, currentRow1);
   }
+});
+
+// Kullanıcı istatistiklerini güncelle
+async function updateUserStats(won) {
+  if (!currentUser) return;
+  
+  try {
+    const userRef = database.ref('users/' + currentUser.uid);
+    const snapshot = await userRef.once('value');
+    const userData = snapshot.val();
+    
+    await userRef.update({
+      gamesPlayed: (userData.gamesPlayed || 0) + 1,
+      gamesWon: won ? (userData.gamesWon || 0) + 1 : (userData.gamesWon || 0)
+    });
+    
+    console.log('İstatistikler güncellendi');
+  } catch (error) {
+    console.error('İstatistik güncelleme hatası:', error);
+  }
+}
+
+// Pas Geç butonu
+passButton.addEventListener("click", () => {
+  handlePass();
 });
 
 // Yeni Oyun butonu (oyun bittiğinde)

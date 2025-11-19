@@ -4,33 +4,24 @@
       "$roomId": {
         ".read": true,
         ".write": true,
-        ".indexOn": ["createdAt"],
-        
-        "player1": {
-          ".validate": "newData.hasChildren(['connected', 'currentRow'])"
+        ".indexOn": ["createdAt"]
+      }
+    },
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth != null && auth.uid == $uid",
+        "displayName": {
+          ".validate": "newData.isString()"
         },
-        "player2": {
-          ".validate": "newData.hasChildren(['connected', 'currentRow'])"
+        "coins": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
         },
-        
-        "secretWord": {
-          ".validate": "newData.isString() && newData.val().length == 5"
+        "gamesPlayed": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
         },
-        
-        "currentTurn": {
-          ".validate": "newData.val() == 'player1' || newData.val() == 'player2'"
-        },
-        
-        "lockedPositions": {
-          ".validate": "newData.hasChildren()"
-        },
-        
-        "gameOver": {
-          ".validate": "newData.isBoolean()"
-        },
-        
-        "winner": {
-          ".validate": "newData.val() == null || newData.val() == 'player1' || newData.val() == 'player2'"
+        "gamesWon": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
         }
       }
     }
