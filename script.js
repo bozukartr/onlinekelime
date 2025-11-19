@@ -66,7 +66,13 @@ const joinForm = document.getElementById("join-form");
 const roomCodeDisplay = document.getElementById("roomCodeDisplay");
 const roomCodeInput = document.getElementById("roomCodeInput");
 const statusText = document.getElementById("statusText");
+const timerText = document.getElementById("timerText");
 const opponentName = document.getElementById("opponentName");
+
+// Zamanlayıcı değişkenleri
+let turnTimer = null;
+let turnTimeRemaining = 30;
+const TURN_TIME_LIMIT = 30; // saniye
 
 // Kelime listesini words.txt dosyasından yükle
 async function loadWords() {
@@ -529,6 +535,11 @@ function updateBoardsForTurn() {
   const isPlayer1Turn = currentTurn === "player1";
   const isPlayer2Turn = currentTurn === "player2";
   
+  // Online modda zamanlayıcıyı başlat
+  if (isOnlineMode && !gameOver) {
+    startTurnTimer();
+  }
+  
   // Oyuncu 1'in tahtasını güncelle
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
@@ -656,6 +667,11 @@ function handleGuess(playerName, gridInputs, currentRow, messageEl, guessButton,
     return;
   }
 
+  // Tahmin yapıldı, zamanlayıcıyı durdur
+  if (isOnlineMode) {
+    stopTurnTimer();
+  }
+  
   const result = evaluateGuess(guess);
   colourRow(gridInputs, currentRow, result);
   const hasNewLocks = lockGreenPositions(result);
@@ -817,6 +833,9 @@ function resetGame(skipWordSelection = false, forceNewWord = false) {
   // Yeni Oyun butonunu gizle, oyun başladı
   hideNewGameButton();
   
+  // Zamanlayıcıyı sıfırla
+  stopTurnTimer();
+  
   currentRow1 = 0;
   currentRow2 = 0;
   gameOver = false;
@@ -910,6 +929,10 @@ document.getElementById("localModeBtn").addEventListener("click", async () => {
   
   document.getElementById("disconnectBtn").style.display = "none";
   document.getElementById("backToMenuBtn").style.display = "inline-block";
+  
+  // Zamanlayıcıyı gizle (lokal modda yok)
+  if (timerText) timerText.style.display = "none";
+  
   resetGame();
 });
 
@@ -1246,7 +1269,14 @@ function listenToGameUpdates() {
   currentRoomRef.child('currentTurn').on('value', (snapshot) => {
     const turn = snapshot.val();
     if (turn && gridInputs1.length > 0 && gridInputs2.length > 0) {
+      const oldTurn = currentTurn;
       currentTurn = turn;
+      
+      // Sıra değiştiyse zamanlayıcıyı yeniden başlat
+      if (oldTurn !== currentTurn) {
+        console.log("Sıra değişti:", oldTurn, "→", currentTurn);
+      }
+      
       updateBoardsForTurn();
     }
   });
@@ -1398,6 +1428,94 @@ function applyOpponentGuess(guessData) {
   }
 }
 
+// Zamanlayıcıyı başlat
+function startTurnTimer() {
+  // Sadece online modda ve kendi sıramda
+  if (!isOnlineMode) return;
+  
+  const isMyTurn = (currentTurn === "player1" && myPlayerNumber === 1) || 
+                   (currentTurn === "player2" && myPlayerNumber === 2);
+  
+  if (!isMyTurn) {
+    // Sıram değilse zamanlayıcıyı gizle
+    if (timerText) timerText.style.display = "none";
+    return;
+  }
+  
+  // Önceki zamanlayıcıyı temizle
+  if (turnTimer) {
+    clearInterval(turnTimer);
+  }
+  
+  turnTimeRemaining = TURN_TIME_LIMIT;
+  if (timerText) {
+    timerText.style.display = "inline-block";
+    timerText.textContent = "⏱️ " + turnTimeRemaining;
+    timerText.classList.remove("warning");
+  }
+  
+  turnTimer = setInterval(() => {
+    turnTimeRemaining--;
+    
+    if (timerText) {
+      timerText.textContent = "⏱️ " + turnTimeRemaining;
+      
+      // Son 10 saniyede kırmızı yap
+      if (turnTimeRemaining <= 10) {
+        timerText.classList.add("warning");
+      }
+    }
+    
+    // Süre doldu
+    if (turnTimeRemaining <= 0) {
+      clearInterval(turnTimer);
+      handleTimeOut();
+    }
+  }, 1000);
+}
+
+// Zamanlayıcıyı durdur
+function stopTurnTimer() {
+  if (turnTimer) {
+    clearInterval(turnTimer);
+    turnTimer = null;
+  }
+  if (timerText) {
+    timerText.style.display = "none";
+  }
+}
+
+// Süre dolduğunda
+function handleTimeOut() {
+  console.log("Süre doldu! Sıra geçiyor...");
+  
+  const myMessageEl = myPlayerNumber === 1 ? messageEl1 : messageEl2;
+  if (myMessageEl) {
+    myMessageEl.textContent = "⏰ Süre doldu! Sıra geçti.";
+    myMessageEl.className = "message neutral";
+    
+    // 2 saniye sonra mesajı temizle
+    setTimeout(() => {
+      if (myMessageEl && myMessageEl.textContent.includes("Süre doldu")) {
+        myMessageEl.textContent = "";
+      }
+    }, 2000);
+  }
+  
+  // Sırayı diğer oyuncuya geç
+  const playerName = myPlayerNumber === 1 ? "player1" : "player2";
+  currentTurn = playerName === "player1" ? "player2" : "player1";
+  
+  // Firebase'e güncellemeyi gönder
+  if (currentRoomRef) {
+    currentRoomRef.update({
+      currentTurn: currentTurn
+    }).catch(err => console.error("Sıra geçiş hatası:", err));
+  }
+  
+  updateBoardsForTurn();
+}
+
 // Yeni Oyun butonunu göster
 function showNewGameButton() {
   if (newGameButton) {
@@ -1406,6 +1524,7 @@ function showNewGameButton() {
   if (resetButton) {
     resetButton.style.display = "none";
   }
+  stopTurnTimer(); // Oyun bitince zamanlayıcıyı durdur
 }
 
 // Yeni Oyun butonunu gizle
@@ -1482,6 +1601,9 @@ function applyGuessToBoard(gridInputs, rowIndex, guess, result) {
 
 // Bağlantıyı kes (Firebase)
 async function disconnect() {
+  // Zamanlayıcıyı durdur
+  stopTurnTimer();
+  
   // Firebase bağlantısını temizle
   if (currentRoomRef && myPlayerNumber) {
     try {

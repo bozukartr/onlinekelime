@@ -394,6 +394,18 @@ h1 {
   font-weight: 600;
 }
 
+#timerText {
+  color: #ffb74d;
+  font-weight: 700;
+  font-size: 16px;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+#timerText.warning {
+  color: #ff5252;
+  animation: pulse 0.5s ease-in-out infinite;
+}
+
 #opponentName {
   color: #aaa;
 }
