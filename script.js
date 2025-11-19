@@ -890,10 +890,18 @@ function initFirebase() {
         console.log('Kullanıcı giriş yaptı:', user.displayName);
         showUserProfile(user);
         loadUserData(user.uid);
+        
+        // Giriş ekranını gizle, mod seçim ekranını göster
+        document.getElementById("login-screen").style.display = "none";
+        document.getElementById("mode-selection").style.display = "block";
       } else {
         currentUser = null;
-        console.log('Kullanıcı çıkış yaptı');
+        console.log('Kullanıcı çıkış yaptı veya giriş yapmamış');
         hideUserProfile();
+        
+        // Giriş ekranını göster
+        document.getElementById("login-screen").style.display = "block";
+        document.getElementById("mode-selection").style.display = "none";
       }
     });
     
@@ -920,13 +928,15 @@ async function loginWithGoogle() {
     // Kullanıcı veritabanını oluştur/güncelle
     await initializeUserData(user.uid, user.displayName, user.photoURL);
     
-    // Mod seçim ekranına geç
-    document.getElementById("login-screen").style.display = "none";
-    document.getElementById("mode-selection").style.display = "block";
+    // onAuthStateChanged otomatik olarak ekranları değiştirecek
     
   } catch (error) {
     console.error('Google giriş hatası:', error);
-    alert('Giriş yapılamadı: ' + error.message);
+    if (error.code === 'auth/popup-closed-by-user') {
+      console.log('Kullanıcı popup\'ı kapattı');
+    } else {
+      alert('Giriş yapılamadı: ' + error.message);
+    }
   }
 }
 
@@ -1045,16 +1055,24 @@ function hideUserProfile() {
 
 // Çıkış yap
 async function logout() {
+  if (!confirm("Çıkış yapmak istediğinize emin misiniz?")) {
+    return;
+  }
+  
   try {
     await auth.signOut();
     console.log('Çıkış yapıldı');
     
-    // Giriş ekranına dön
-    document.getElementById("login-screen").style.display = "block";
-    document.getElementById("mode-selection").style.display = "none";
-    hideUserProfile();
+    // onAuthStateChanged otomatik olarak ekranları değiştirecek
+    // Oyun ekranındaysa ana menüye dön
+    if (gameScreen.style.display !== "none") {
+      gameScreen.style.display = "none";
+      connectionScreen.style.display = "block";
+    }
+    
   } catch (error) {
     console.error('Çıkış hatası:', error);
+    alert('Çıkış yapılamadı: ' + error.message);
   }
 }
 
@@ -1182,7 +1200,16 @@ document.getElementById("backToMenuBtn").addEventListener("click", () => {
     // Lokal modda direkt ana menüye dön
     gameScreen.style.display = "none";
     connectionScreen.style.display = "block";
-    document.querySelector(".connection-box").style.display = "block";
+    
+    // Giriş yapmışsa mod seçim ekranını göster, yoksa giriş ekranını
+    if (currentUser) {
+      document.getElementById("login-screen").style.display = "none";
+      document.getElementById("mode-selection").style.display = "block";
+    } else {
+      document.getElementById("login-screen").style.display = "block";
+      document.getElementById("mode-selection").style.display = "none";
+    }
+    
     onlineOptions.style.display = "none";
     isLocalMode = false;
     isOnlineMode = false;
