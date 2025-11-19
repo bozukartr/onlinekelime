@@ -1431,14 +1431,22 @@ function applyOpponentGuess(guessData) {
 // Zamanlayıcıyı başlat
 function startTurnTimer() {
   // Sadece online modda ve kendi sıramda
-  if (!isOnlineMode) return;
+  if (!isOnlineMode) {
+    if (timerText) timerText.style.display = "none";
+    return;
+  }
   
   const isMyTurn = (currentTurn === "player1" && myPlayerNumber === 1) || 
                    (currentTurn === "player2" && myPlayerNumber === 2);
   
+  console.log("startTurnTimer çağrıldı - isMyTurn:", isMyTurn, "currentTurn:", currentTurn, "myPlayerNumber:", myPlayerNumber);
+  
   if (!isMyTurn) {
     // Sıram değilse zamanlayıcıyı gizle
-    if (timerText) timerText.style.display = "none";
+    if (timerText) {
+      timerText.style.display = "none";
+      console.log("Zamanlayıcı gizlendi (sıram değil)");
+    }
     return;
   }
   
@@ -1450,8 +1458,10 @@ function startTurnTimer() {
   turnTimeRemaining = TURN_TIME_LIMIT;
   if (timerText) {
     timerText.style.display = "inline-block";
+    timerText.style.visibility = "visible";
     timerText.textContent = "⏱️ " + turnTimeRemaining;
     timerText.classList.remove("warning");
+    console.log("Zamanlayıcı başlatıldı:", turnTimeRemaining);
   }
   
   turnTimer = setInterval(() => {
