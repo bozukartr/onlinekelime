@@ -1132,7 +1132,7 @@ document.getElementById("localModeBtn").addEventListener("click", async () => {
 
 // Online mod seç
 document.getElementById("onlineModeBtn").addEventListener("click", () => {
-  document.querySelector(".connection-box").style.display = "none";
+  document.getElementById("mode-selection").style.display = "none";
   onlineOptions.style.display = "block";
   // Butonları göster ve diğer formları gizle
   document.querySelector(".online-buttons").style.display = "flex";
@@ -1145,7 +1145,14 @@ document.getElementById("backBtn").addEventListener("click", () => {
   onlineOptions.style.display = "none";
   roomInfo.style.display = "none";
   joinForm.style.display = "none";
-  document.querySelector(".connection-box").style.display = "block";
+  
+  // Giriş yapmışsa mod seçim ekranını göster
+  if (currentUser) {
+    document.getElementById("mode-selection").style.display = "block";
+  } else {
+    document.getElementById("login-screen").style.display = "block";
+  }
+  
   // Butonları tekrar göster
   document.querySelector(".online-buttons").style.display = "flex";
 });
@@ -1799,8 +1806,16 @@ async function disconnect() {
   onlineOptions.style.display = "none";
   roomInfo.style.display = "none";
   joinForm.style.display = "none";
-  document.querySelector(".connection-box").style.display = "block";
   document.querySelector(".online-buttons").style.display = "flex";
+  
+  // Giriş yapmışsa mod seçim ekranını göster
+  if (currentUser) {
+    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("mode-selection").style.display = "block";
+  } else {
+    document.getElementById("login-screen").style.display = "block";
+    document.getElementById("mode-selection").style.display = "none";
+  }
   
   isOnlineMode = false;
   myPlayerNumber = 0;
