@@ -1129,24 +1129,53 @@ async function initGame() {
     console.log('Oyun hazır!');
   }
   initFirebase();
+  
+  // Event listener'ları DOM yüklendikten sonra ekle
+  setupEventListeners();
 }
 
-// Google giriş butonu
-document.getElementById("googleLoginBtn").addEventListener("click", () => {
-  loginWithGoogle();
-});
+// Event listener'ları kur
+function setupEventListeners() {
+  console.log("Event listener'lar kuruluyor...");
+  
+  // Google giriş butonu
+  const googleLoginBtn = document.getElementById("googleLoginBtn");
+  if (googleLoginBtn) {
+    console.log("Google giriş butonu bulundu");
+    googleLoginBtn.addEventListener("click", () => {
+      console.log("Google giriş butonuna tıklandı");
+      loginWithGoogle();
+    });
+  } else {
+    console.error("Google giriş butonu bulunamadı!");
+  }
 
-// Misafir olarak devam et
-document.getElementById("skipLoginBtn").addEventListener("click", () => {
-  document.getElementById("login-screen").style.display = "none";
-  document.getElementById("mode-selection").style.display = "block";
-  console.log('Misafir olarak devam edildi');
-});
+  // Misafir olarak devam et
+  const skipLoginBtn = document.getElementById("skipLoginBtn");
+  if (skipLoginBtn) {
+    console.log("Misafir butonu bulundu");
+    skipLoginBtn.addEventListener("click", () => {
+      console.log("Misafir olarak devam edildi");
+      document.getElementById("login-screen").style.display = "none";
+      document.getElementById("mode-selection").style.display = "block";
+    });
+  } else {
+    console.error("Misafir butonu bulunamadı!");
+  }
 
-// Çıkış butonu
-document.getElementById("logoutBtn").addEventListener("click", () => {
-  logout();
-});
+  // Çıkış butonu
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn) {
+    console.log("Çıkış butonu bulundu");
+    logoutBtn.addEventListener("click", () => {
+      logout();
+    });
+  } else {
+    console.error("Çıkış butonu bulunamadı!");
+  }
+  
+  console.log("Event listener'lar kuruldu");
+}
 
 // Lokal mod başlat
 document.getElementById("localModeBtn").addEventListener("click", async () => {
