@@ -1622,7 +1622,9 @@ async function updateOpponentInfo() {
         opponentTitleEl.textContent = opponentName;
       }
       if (opponentSubtitleEl) {
-        opponentSubtitleEl.textContent = opponentData.uid ? "🟢 Online" : "👤 Misafir";
+        // Alt yazıda da ismi göster (daha küçük)
+        opponentSubtitleEl.textContent = opponentData.uid ? "🟢 Çevrimiçi" : "👤 Misafir";
+        opponentSubtitleEl.style.color = "#aaa";
       }
     }
     
@@ -1638,16 +1640,19 @@ async function updateOpponentInfo() {
         document.getElementById("player1Subtitle") : 
         document.getElementById("player2Subtitle");
       
+      const myName = myData.displayName || "Sen";
+      
       if (myAvatarEl && myData.photoURL) {
         myAvatarEl.src = myData.photoURL;
         myAvatarEl.style.display = "block";
       }
       if (myTitleEl) {
-        myTitleEl.textContent = myData.displayName || "Sen";
+        myTitleEl.textContent = myName;
       }
       if (mySubtitleEl) {
         mySubtitleEl.textContent = "Sen";
         mySubtitleEl.style.color = "#4caf50";
+        mySubtitleEl.style.fontWeight = "600";
       }
     }
     
