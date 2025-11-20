@@ -1307,11 +1307,17 @@ async function createRoom() {
       currentTurn: currentTurn,
       player1: {
         connected: true,
-        currentRow: 0
+        currentRow: 0,
+        displayName: currentUser ? currentUser.displayName : "Oyuncu 1",
+        photoURL: currentUser ? currentUser.photoURL : null,
+        uid: currentUser ? currentUser.uid : null
       },
       player2: {
         connected: false,
-        currentRow: 0
+        currentRow: 0,
+        displayName: null,
+        photoURL: null,
+        uid: null
       },
       lockedPositions: [false, false, false, false, false],
       gameOver: false,
@@ -1384,7 +1390,10 @@ async function joinRoom(roomCode) {
     // Oyuna katıl
     await currentRoomRef.child('player2').update({
       connected: true,
-      currentRow: 0
+      currentRow: 0,
+      displayName: currentUser ? currentUser.displayName : "Oyuncu 2",
+      photoURL: currentUser ? currentUser.photoURL : null,
+      uid: currentUser ? currentUser.uid : null
     });
     
     // Oyun verilerini al ve SAKLA - BU ÇOK ÖNEMLİ!
@@ -1542,7 +1551,7 @@ function listenToGameUpdates() {
   
   // Bağlantı durumunu dinle
   let hasSeenOpponentConnected = false;
-  currentRoomRef.child(otherPlayer + '/connected').on('value', (snapshot) => {
+  currentRoomRef.child(otherPlayer + '/connected').on('value', async (snapshot) => {
     const isConnected = snapshot.val();
     
     // Rakip hiç bağlanmadıysa (ilk yüklemede false) uyarı gösterme
@@ -1550,7 +1559,9 @@ function listenToGameUpdates() {
       if (isConnected === true) {
         hasSeenOpponentConnected = true;
         statusText.textContent = "🟢 Bağlı";
-        opponentName.textContent = "Rakip: Hazır";
+        
+        // Rakip bilgilerini al ve göster
+        await updateOpponentInfo();
       }
       // İlk yüklemede false ise sadece logla, uyarı gösterme
       return;
@@ -1564,9 +1575,86 @@ function listenToGameUpdates() {
     } else if (isConnected === true) {
       hasSeenOpponentConnected = true;
       statusText.textContent = "🟢 Bağlı";
-      opponentName.textContent = "Rakip: Hazır";
+      
+      // Rakip bilgilerini al ve göster
+      await updateOpponentInfo();
     }
   });
+}
+
+// Rakip bilgilerini güncelle
+async function updateOpponentInfo() {
+  if (!currentRoomRef) return;
+  
+  try {
+    const snapshot = await currentRoomRef.once('value');
+    const roomData = snapshot.val();
+    
+    if (!roomData) return;
+    
+    const opponentData = myPlayerNumber === 1 ? roomData.player2 : roomData.player1;
+    const myData = myPlayerNumber === 1 ? roomData.player1 : roomData.player2;
+    
+    // Rakip bilgilerini göster
+    if (opponentData) {
+      const opponentName = opponentData.displayName || "Rakip";
+      const opponentPhoto = opponentData.photoURL;
+      
+      // Status bar'da rakip ismi
+      document.getElementById("opponentName").textContent = "Rakip: " + opponentName;
+      
+      // Board üstünde rakip bilgileri
+      const opponentAvatarEl = myPlayerNumber === 1 ? 
+        document.getElementById("player2Avatar") : 
+        document.getElementById("player1Avatar");
+      const opponentTitleEl = myPlayerNumber === 1 ? 
+        document.getElementById("player2Title") : 
+        document.getElementById("player1Title");
+      const opponentSubtitleEl = myPlayerNumber === 1 ? 
+        document.getElementById("player2Subtitle") : 
+        document.getElementById("player1Subtitle");
+      
+      if (opponentAvatarEl && opponentPhoto) {
+        opponentAvatarEl.src = opponentPhoto;
+        opponentAvatarEl.style.display = "block";
+      }
+      if (opponentTitleEl) {
+        opponentTitleEl.textContent = opponentName;
+      }
+      if (opponentSubtitleEl) {
+        opponentSubtitleEl.textContent = opponentData.uid ? "🟢 Online" : "👤 Misafir";
+      }
+    }
+    
+    // Kendi bilgilerimi göster
+    if (myData) {
+      const myAvatarEl = myPlayerNumber === 1 ? 
+        document.getElementById("player1Avatar") : 
+        document.getElementById("player2Avatar");
+      const myTitleEl = myPlayerNumber === 1 ? 
+        document.getElementById("player1Title") : 
+        document.getElementById("player2Title");
+      const mySubtitleEl = myPlayerNumber === 1 ? 
+        document.getElementById("player1Subtitle") : 
+        document.getElementById("player2Subtitle");
+      
+      if (myAvatarEl && myData.photoURL) {
+        myAvatarEl.src = myData.photoURL;
+        myAvatarEl.style.display = "block";
+      }
+      if (myTitleEl) {
+        myTitleEl.textContent = myData.displayName || "Sen";
+      }
+      if (mySubtitleEl) {
+        mySubtitleEl.textContent = "Sen";
+        mySubtitleEl.style.color = "#4caf50";
+      }
+    }
+    
+    console.log('Oyuncu bilgileri güncellendi');
+  } catch (error) {
+    console.error('Rakip bilgisi alma hatası:', error);
+  }
 }
 
 // Online oyunu başlat
@@ -1599,6 +1687,9 @@ async function startOnlineGame() {
     
     // ÖNEMLİ: Kelime zaten var, YENİ SEÇME!
     resetGame(true); // skipWordSelection = true
+    
+    // Oyuncu bilgilerini göster
+    await updateOpponentInfo();
   } else {
     // Katılan oyuncu Firebase'den güncel verileri bir kez daha okuyor
     console.log("========================================");
@@ -1626,6 +1717,9 @@ async function startOnlineGame() {
     resetGame(true); // skipWordSelection = true
     
     console.log("Board oluşturulduktan SONRA kelime:", secretWord);
+    
+    // Oyuncu bilgilerini göster
+    await updateOpponentInfo();
   }
 }
 
