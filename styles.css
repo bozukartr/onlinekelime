@@ -80,12 +80,84 @@ h1 {
   color: #eee;
 }
 
-/* Google Giriş */
+/* Login Container */
+.login-container {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  border: 2px solid #444;
+  border-radius: 16px;
+  padding: 32px 24px;
+  max-width: 480px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+.login-hero {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.game-logo {
+  font-size: 64px;
+  margin-bottom: 16px;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.login-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.login-subtitle {
+  font-size: 14px;
+  color: #aaa;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.login-features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.feature-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  background: rgba(102, 126, 234, 0.1);
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 10px;
+}
+
+.feature-icon {
+  font-size: 24px;
+}
+
+.feature-text {
+  font-size: 12px;
+  color: #aaa;
+  font-weight: 500;
+}
+
+/* Google Giriş Butonu */
 .google-login-btn {
   width: 100%;
-  padding: 14px 20px;
+  padding: 16px 24px;
   font-size: 16px;
-  border-radius: 8px;
+  border-radius: 10px;
   border: none;
   background: #fff;
   color: #333;
@@ -94,28 +166,75 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: box-shadow 0.3s ease;
-  margin-bottom: 12px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(255,255,255,0.1);
 }
 
 .google-login-btn:hover {
-  box-shadow: 0 2px 8px rgba(255,255,255,0.2);
+  box-shadow: 0 6px 20px rgba(255,255,255,0.25);
+  transform: translateY(-2px);
 }
 
+.google-login-btn:active {
+  transform: translateY(0);
+}
+
+/* Divider */
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 20px 0;
+  color: #666;
+  font-size: 13px;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #333;
+}
+
+.divider span {
+  padding: 0 12px;
+  color: #666;
+}
+
+/* Misafir Butonu */
 .skip-login-btn {
   width: 100%;
-  padding: 12px;
-  font-size: 14px;
-  border-radius: 8px;
-  border: 1px solid #444;
+  padding: 14px 20px;
+  font-size: 15px;
+  border-radius: 10px;
+  border: 2px solid #444;
   background: transparent;
   color: #aaa;
   cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
 }
 
 .skip-login-btn:hover {
   background: #222;
   color: #eee;
+  border-color: #555;
+  transform: translateY(-2px);
+}
+
+.skip-login-btn:active {
+  transform: translateY(0);
+}
+
+.login-note {
+  margin-top: 20px;
+  font-size: 11px;
+  color: #666;
+  text-align: center;
+  line-height: 1.5;
 }
 
 .subtitle {

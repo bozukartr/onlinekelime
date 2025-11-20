@@ -632,7 +632,7 @@ function updateBoardsForTurn() {
   }
 }
 
-async function handleGuess(playerName, gridInputs, currentRow, messageEl, guessButton, otherGridInputs, otherCurrentRow) {
+function handleGuess(playerName, gridInputs, currentRow, messageEl, guessButton, otherGridInputs, otherCurrentRow) {
   if (gameOver) return;
   
   // Online modda sıra kontrolü
@@ -1129,53 +1129,24 @@ async function initGame() {
     console.log('Oyun hazır!');
   }
   initFirebase();
-  
-  // Event listener'ları DOM yüklendikten sonra ekle
-  setupEventListeners();
 }
 
-// Event listener'ları kur
-function setupEventListeners() {
-  console.log("Event listener'lar kuruluyor...");
-  
-  // Google giriş butonu
-  const googleLoginBtn = document.getElementById("googleLoginBtn");
-  if (googleLoginBtn) {
-    console.log("Google giriş butonu bulundu");
-    googleLoginBtn.addEventListener("click", () => {
-      console.log("Google giriş butonuna tıklandı");
-      loginWithGoogle();
-    });
-  } else {
-    console.error("Google giriş butonu bulunamadı!");
-  }
+// Google giriş butonu
+document.getElementById("googleLoginBtn").addEventListener("click", () => {
+  loginWithGoogle();
+});
 
-  // Misafir olarak devam et
-  const skipLoginBtn = document.getElementById("skipLoginBtn");
-  if (skipLoginBtn) {
-    console.log("Misafir butonu bulundu");
-    skipLoginBtn.addEventListener("click", () => {
-      console.log("Misafir olarak devam edildi");
-      document.getElementById("login-screen").style.display = "none";
-      document.getElementById("mode-selection").style.display = "block";
-    });
-  } else {
-    console.error("Misafir butonu bulunamadı!");
-  }
+// Misafir olarak devam et
+document.getElementById("skipLoginBtn").addEventListener("click", () => {
+  document.getElementById("login-screen").style.display = "none";
+  document.getElementById("mode-selection").style.display = "block";
+  console.log('Misafir olarak devam edildi');
+});
 
-  // Çıkış butonu
-  const logoutBtn = document.getElementById("logoutBtn");
-  if (logoutBtn) {
-    console.log("Çıkış butonu bulundu");
-    logoutBtn.addEventListener("click", () => {
-      logout();
-    });
-  } else {
-    console.error("Çıkış butonu bulunamadı!");
-  }
-  
-  console.log("Event listener'lar kuruldu");
-}
+// Çıkış butonu
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  logout();
+});
 
 // Lokal mod başlat
 document.getElementById("localModeBtn").addEventListener("click", async () => {
@@ -1336,15 +1307,11 @@ async function createRoom() {
       currentTurn: currentTurn,
       player1: {
         connected: true,
-        currentRow: 0,
-        displayName: currentUser ? currentUser.displayName : "Oyuncu 1",
-        photoURL: currentUser ? currentUser.photoURL : null
+        currentRow: 0
       },
       player2: {
         connected: false,
-        currentRow: 0,
-        displayName: null,
-        photoURL: null
+        currentRow: 0
       },
       lockedPositions: [false, false, false, false, false],
       gameOver: false,
@@ -1417,9 +1384,7 @@ async function joinRoom(roomCode) {
     // Oyuna katıl
     await currentRoomRef.child('player2').update({
       connected: true,
-      currentRow: 0,
-      displayName: currentUser ? currentUser.displayName : "Oyuncu 2",
-      photoURL: currentUser ? currentUser.photoURL : null
+      currentRow: 0
     });
     
     // Oyun verilerini al ve SAKLA - BU ÇOK ÖNEMLİ!
@@ -1577,7 +1542,7 @@ function listenToGameUpdates() {
   
   // Bağlantı durumunu dinle
   let hasSeenOpponentConnected = false;
-  currentRoomRef.child(otherPlayer + '/connected').on('value', async (snapshot) => {
+  currentRoomRef.child(otherPlayer + '/connected').on('value', (snapshot) => {
     const isConnected = snapshot.val();
     
     // Rakip hiç bağlanmadıysa (ilk yüklemede false) uyarı gösterme
@@ -1585,25 +1550,7 @@ function listenToGameUpdates() {
       if (isConnected === true) {
         hasSeenOpponentConnected = true;
         statusText.textContent = "🟢 Bağlı";
-        
-        // Rakibin ismini al
-        try {
-          const roomSnapshot = await currentRoomRef.once('value');
-          const roomData = roomSnapshot.val();
-          const opponentDisplayName = myPlayerNumber === 1 ? 
-            (roomData.player2?.displayName || "Rakip") : 
-            (roomData.player1?.displayName || "Rakip");
-          
-          if (opponentName) {
-            opponentName.textContent = "Rakip: " + opponentDisplayName;
-          }
-          
-          // Board başlıklarını güncelle
-          updatePlayerTitles(roomData);
-        } catch (error) {
-          console.error("Rakip ismi alınamadı:", error);
-          if (opponentName) opponentName.textContent = "Rakip: Hazır";
-        }
+        opponentName.textContent = "Rakip: Hazır";
       }
       // İlk yüklemede false ise sadece logla, uyarı gösterme
       return;
@@ -1612,46 +1559,14 @@ function listenToGameUpdates() {
     // Rakip daha önce bağlandıysa ve şimdi ayrıldıysa uyar
     if (isConnected === false && isOnlineMode && hasSeenOpponentConnected) {
       statusText.textContent = "🔴 Bağlantı Kesildi";
-      if (opponentName) opponentName.textContent = "Rakip: Ayrıldı";
+      opponentName.textContent = "Rakip: Ayrıldı";
       alert("Rakip oyundan ayrıldı.");
     } else if (isConnected === true) {
       hasSeenOpponentConnected = true;
       statusText.textContent = "🟢 Bağlı";
-      
-      // Rakibin ismini güncelle
-      try {
-        const roomSnapshot = await currentRoomRef.once('value');
-        const roomData = roomSnapshot.val();
-        const opponentDisplayName = myPlayerNumber === 1 ? 
-          (roomData.player2?.displayName || "Rakip") : 
-          (roomData.player1?.displayName || "Rakip");
-        
-        if (opponentName) {
-          opponentName.textContent = "Rakip: " + opponentDisplayName;
-        }
-      } catch (error) {
-        console.error("Rakip ismi alınamadı:", error);
-        if (opponentName) opponentName.textContent = "Rakip: Hazır";
-      }
+      opponentName.textContent = "Rakip: Hazır";
     }
   });
-}
-
-// Oyuncu başlıklarını güncelle
-function updatePlayerTitles(roomData) {
-  if (!roomData) return;
-  
-  const player1Name = roomData.player1?.displayName || "Oyuncu 1";
-  const player2Name = roomData.player2?.displayName || "Oyuncu 2";
-  
-  if (myPlayerNumber === 1) {
-    document.getElementById("player1Title").textContent = "Sen (" + player1Name + ")";
-    document.getElementById("player2Title").textContent = player2Name || "Rakip";
-  } else if (myPlayerNumber === 2) {
-    document.getElementById("player1Title").textContent = player1Name || "Rakip";
-    document.getElementById("player2Title").textContent = "Sen (" + player2Name + ")";
-  }
-}
 }
 
 // Online oyunu başlat
@@ -1664,37 +1579,8 @@ async function startOnlineGame() {
   document.getElementById("player1Section").style.display = "flex";
   document.getElementById("player2Section").style.display = "flex";
   
-  // Oyuncu isimlerini Firebase'den al ve göster
-  try {
-    const snapshot = await currentRoomRef.once('value');
-    const roomData = snapshot.val();
-    
-    if (roomData) {
-      const player1Name = roomData.player1?.displayName || "Oyuncu 1";
-      const player2Name = roomData.player2?.displayName || "Oyuncu 2";
-      
-      // İsimleri ayarla
-      if (myPlayerNumber === 1) {
-        document.getElementById("player1Title").textContent = "Sen (" + player1Name + ")";
-        document.getElementById("player2Title").textContent = player2Name || "Rakip";
-      } else {
-        document.getElementById("player1Title").textContent = player1Name || "Rakip";
-        document.getElementById("player2Title").textContent = "Sen (" + player2Name + ")";
-      }
-      
-      // Opponent name'i güncelle
-      const opponentName = myPlayerNumber === 1 ? player2Name : player1Name;
-      if (document.getElementById("opponentName")) {
-        document.getElementById("opponentName").textContent = "Rakip: " + (opponentName || "Bekleniyor...");
-      }
-    }
-  } catch (error) {
-    console.error("Oyuncu isimleri alınamadı:", error);
-    // Hata olursa varsayılan isimleri kullan
-    document.getElementById("player1Title").textContent = myPlayerNumber === 1 ? "Sen" : "Rakip";
-    document.getElementById("player2Title").textContent = myPlayerNumber === 2 ? "Sen" : "Rakip";
-  }
-  
+  document.getElementById("player1Title").textContent = myPlayerNumber === 1 ? "Sen" : "Rakip";
+  document.getElementById("player2Title").textContent = myPlayerNumber === 2 ? "Sen" : "Rakip";
   document.getElementById("disconnectBtn").style.display = "inline-block";
   document.getElementById("backToMenuBtn").style.display = "inline-block";
   
