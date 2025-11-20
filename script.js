@@ -690,6 +690,20 @@ function handleGuess(playerName, gridInputs, currentRow, messageEl, guessButton,
       otherMessageEl.className = "message lose";
     }
     
+    // Altın kazan (sadece ben kazandıysam)
+    const isMyWin = (playerName === "player1" && (isLocalMode || myPlayerNumber === 1)) ||
+                    (playerName === "player2" && myPlayerNumber === 2);
+    
+    console.log("Kazanma kontrolü - playerName:", playerName, "myPlayerNumber:", myPlayerNumber, "isMyWin:", isMyWin);
+    
+    if (isMyWin && currentUser) {
+      console.log("Altın kazanıldı: +10");
+      await addCoins(10); // Kazanma ödülü: 10 altın
+      
+      // İstatistikleri güncelle
+      await updateUserStats(true);
+    }
+    
     // Kelimenin anlamını göster
     if (isOnlineMode) {
       // Online modda: Sadece kazanan kişi Gemini'ye istek atsın
@@ -1293,11 +1307,15 @@ async function createRoom() {
       currentTurn: currentTurn,
       player1: {
         connected: true,
-        currentRow: 0
+        currentRow: 0,
+        displayName: currentUser ? currentUser.displayName : "Oyuncu 1",
+        photoURL: currentUser ? currentUser.photoURL : null
       },
       player2: {
         connected: false,
-        currentRow: 0
+        currentRow: 0,
+        displayName: null,
+        photoURL: null
       },
       lockedPositions: [false, false, false, false, false],
       gameOver: false,
@@ -1370,7 +1388,9 @@ async function joinRoom(roomCode) {
     // Oyuna katıl
     await currentRoomRef.child('player2').update({
       connected: true,
-      currentRow: 0
+      currentRow: 0,
+      displayName: currentUser ? currentUser.displayName : "Oyuncu 2",
+      photoURL: currentUser ? currentUser.photoURL : null
     });
     
     // Oyun verilerini al ve SAKLA - BU ÇOK ÖNEMLİ!
@@ -1528,7 +1548,7 @@ function listenToGameUpdates() {
   
   // Bağlantı durumunu dinle
   let hasSeenOpponentConnected = false;
-  currentRoomRef.child(otherPlayer + '/connected').on('value', (snapshot) => {
+  currentRoomRef.child(otherPlayer + '/connected').on('value', async (snapshot) => {
     const isConnected = snapshot.val();
     
     // Rakip hiç bağlanmadıysa (ilk yüklemede false) uyarı gösterme
@@ -1536,7 +1556,25 @@ function listenToGameUpdates() {
       if (isConnected === true) {
         hasSeenOpponentConnected = true;
         statusText.textContent = "🟢 Bağlı";
-        opponentName.textContent = "Rakip: Hazır";
+        
+        // Rakibin ismini al
+        try {
+          const roomSnapshot = await currentRoomRef.once('value');
+          const roomData = roomSnapshot.val();
+          const opponentDisplayName = myPlayerNumber === 1 ? 
+            (roomData.player2?.displayName || "Rakip") : 
+            (roomData.player1?.displayName || "Rakip");
+          
+          if (opponentName) {
+            opponentName.textContent = "Rakip: " + opponentDisplayName;
+          }
+          
+          // Board başlıklarını güncelle
+          updatePlayerTitles(roomData);
+        } catch (error) {
+          console.error("Rakip ismi alınamadı:", error);
+          if (opponentName) opponentName.textContent = "Rakip: Hazır";
+        }
       }
       // İlk yüklemede false ise sadece logla, uyarı gösterme
       return;
@@ -1545,14 +1583,46 @@ function listenToGameUpdates() {
     // Rakip daha önce bağlandıysa ve şimdi ayrıldıysa uyar
     if (isConnected === false && isOnlineMode && hasSeenOpponentConnected) {
       statusText.textContent = "🔴 Bağlantı Kesildi";
-      opponentName.textContent = "Rakip: Ayrıldı";
+      if (opponentName) opponentName.textContent = "Rakip: Ayrıldı";
       alert("Rakip oyundan ayrıldı.");
     } else if (isConnected === true) {
       hasSeenOpponentConnected = true;
       statusText.textContent = "🟢 Bağlı";
-      opponentName.textContent = "Rakip: Hazır";
+      
+      // Rakibin ismini güncelle
+      try {
+        const roomSnapshot = await currentRoomRef.once('value');
+        const roomData = roomSnapshot.val();
+        const opponentDisplayName = myPlayerNumber === 1 ? 
+          (roomData.player2?.displayName || "Rakip") : 
+          (roomData.player1?.displayName || "Rakip");
+        
+        if (opponentName) {
+          opponentName.textContent = "Rakip: " + opponentDisplayName;
+        }
+      } catch (error) {
+        console.error("Rakip ismi alınamadı:", error);
+        if (opponentName) opponentName.textContent = "Rakip: Hazır";
+      }
     }
   });
+}
+
+// Oyuncu başlıklarını güncelle
+function updatePlayerTitles(roomData) {
+  if (!roomData) return;
+  
+  const player1Name = roomData.player1?.displayName || "Oyuncu 1";
+  const player2Name = roomData.player2?.displayName || "Oyuncu 2";
+  
+  if (myPlayerNumber === 1) {
+    document.getElementById("player1Title").textContent = "Sen (" + player1Name + ")";
+    document.getElementById("player2Title").textContent = player2Name || "Rakip";
+  } else if (myPlayerNumber === 2) {
+    document.getElementById("player1Title").textContent = player1Name || "Rakip";
+    document.getElementById("player2Title").textContent = "Sen (" + player2Name + ")";
+  }
+}
 }
 
 // Online oyunu başlat
@@ -1565,8 +1635,37 @@ async function startOnlineGame() {
   document.getElementById("player1Section").style.display = "flex";
   document.getElementById("player2Section").style.display = "flex";
   
-  document.getElementById("player1Title").textContent = myPlayerNumber === 1 ? "Sen" : "Rakip";
-  document.getElementById("player2Title").textContent = myPlayerNumber === 2 ? "Sen" : "Rakip";
+  // Oyuncu isimlerini Firebase'den al ve göster
+  try {
+    const snapshot = await currentRoomRef.once('value');
+    const roomData = snapshot.val();
+    
+    if (roomData) {
+      const player1Name = roomData.player1?.displayName || "Oyuncu 1";
+      const player2Name = roomData.player2?.displayName || "Oyuncu 2";
+      
+      // İsimleri ayarla
+      if (myPlayerNumber === 1) {
+        document.getElementById("player1Title").textContent = "Sen (" + player1Name + ")";
+        document.getElementById("player2Title").textContent = player2Name || "Rakip";
+      } else {
+        document.getElementById("player1Title").textContent = player1Name || "Rakip";
+        document.getElementById("player2Title").textContent = "Sen (" + player2Name + ")";
+      }
+      
+      // Opponent name'i güncelle
+      const opponentName = myPlayerNumber === 1 ? player2Name : player1Name;
+      if (document.getElementById("opponentName")) {
+        document.getElementById("opponentName").textContent = "Rakip: " + (opponentName || "Bekleniyor...");
+      }
+    }
+  } catch (error) {
+    console.error("Oyuncu isimleri alınamadı:", error);
+    // Hata olursa varsayılan isimleri kullan
+    document.getElementById("player1Title").textContent = myPlayerNumber === 1 ? "Sen" : "Rakip";
+    document.getElementById("player2Title").textContent = myPlayerNumber === 2 ? "Sen" : "Rakip";
+  }
+  
   document.getElementById("disconnectBtn").style.display = "inline-block";
   document.getElementById("backToMenuBtn").style.display = "inline-block";
   
@@ -1755,7 +1854,7 @@ function hideNewGameButton() {
 }
 
 // Online oyun bitişi
-function handleOnlineGameEnd(winnerPlayer) {
+async function handleOnlineGameEnd(winnerPlayer) {
   gameOver = true;
   if (guessButton1) guessButton1.disabled = true;
   if (guessButton2) guessButton2.disabled = true;
@@ -1775,6 +1874,13 @@ function handleOnlineGameEnd(winnerPlayer) {
       otherMessageEl.textContent = "😔 Kaybettin! Kelime: " + secretWord;
       otherMessageEl.className = "message lose";
     }
+    
+    // Altın kazan (online modda ben kazandıysam)
+    if (currentUser) {
+      console.log("Online oyun kazanıldı - Altın ekleniyor: +10");
+      await addCoins(10);
+      await updateUserStats(true);
+    }
   } else {
     // Rakip kazandı
     const myMessageEl = myPlayerNumber === 1 ? messageEl1 : messageEl2;
@@ -1786,6 +1892,11 @@ function handleOnlineGameEnd(winnerPlayer) {
     if (otherMessageEl) {
       otherMessageEl.textContent = "🎉 KAZANDI! Kelime: " + secretWord;
       otherMessageEl.className = "message win";
+    }
+    
+    // Kaybettim, istatistik güncelle (altın yok)
+    if (currentUser) {
+      await updateUserStats(false);
     }
   }
   
