@@ -632,7 +632,7 @@ function updateBoardsForTurn() {
   }
 }
 
-function handleGuess(playerName, gridInputs, currentRow, messageEl, guessButton, otherGridInputs, otherCurrentRow) {
+async function handleGuess(playerName, gridInputs, currentRow, messageEl, guessButton, otherGridInputs, otherCurrentRow) {
   if (gameOver) return;
   
   // Online modda sıra kontrolü
