@@ -1073,10 +1073,10 @@ function updatePowerupButtons() {
   }
   
   if (revealLetterBtn) {
-    revealLetterBtn.disabled = userCoins < 50 || gameOver;
+    revealLetterBtn.disabled = userCoins < 5 || gameOver;
   }
   if (revealWordBtn) {
-    revealWordBtn.disabled = userCoins < 100 || gameOver;
+    revealWordBtn.disabled = userCoins < 50 || gameOver;
   }
 }
 
