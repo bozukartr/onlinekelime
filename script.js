@@ -78,6 +78,11 @@ const powerupsContainer = document.getElementById("powerups-container");
 const revealLetterBtn = document.getElementById("revealLetterBtn");
 const revealTileBtn = document.getElementById("revealTileBtn");
 
+// Timer Elements
+const timer1 = document.getElementById("timer1");
+const timer2 = document.getElementById("timer2");
+
+
 // Selection Mode State
 let isSelectingTile = false;
 
@@ -191,40 +196,42 @@ function isValidWord(word) {
 }
 
 // Timer Functions
+// Timer Functions
 function updateTimerDisplay() {
-  if (timerDisplay) {
-    timerDisplay.textContent = "⏳ " + timeLeft;
+  // Clear both timers first
+  if (timer1) {
+    timer1.textContent = "";
+    timer1.classList.remove("warning");
+  }
+  if (timer2) {
+    timer2.textContent = "";
+    timer2.classList.remove("warning");
+  }
+
+  // Determine active timer
+  let activeTimer = null;
+  if (!isOnlineMode) {
+    // Local mode: use timer1 simply (or alternate if we had 2 local players explicitly designated, but local mode logic is simpler)
+    activeTimer = timer1;
+  } else {
+    if (currentTurn === "player1") activeTimer = timer1;
+    else if (currentTurn === "player2") activeTimer = timer2;
+  }
+
+  if (activeTimer) {
+    activeTimer.textContent = timeLeft + "s";
     if (timeLeft <= 10) {
-      timerDisplay.classList.add("timer-warning");
-    } else {
-      timerDisplay.classList.remove("timer-warning");
+      activeTimer.classList.add("warning");
     }
   }
 }
 
 function startTimer() {
   stopTimer(); // Ensure no duplicates
-
   if (gameOver) return;
-
-  // Timer should run if it's my turn
-  // In specific modes
-  const isMyTurn = (isLocalMode) ||
-    (isOnlineMode && (
-      (currentTurn === "player1" && myPlayerNumber === 1) ||
-      (currentTurn === "player2" && myPlayerNumber === 2)
-    ));
-
-  if (!isMyTurn) {
-    // Hide timer if not my turn (or show simple waiting?)
-    // Let's just hide it or show "Bekleniyor..."
-    if (timerDisplay) timerDisplay.style.display = "none";
-    return;
-  }
 
   timeLeft = TURN_DURATION;
   updateTimerDisplay();
-  if (timerDisplay) timerDisplay.style.display = "flex";
 
   timerInterval = setInterval(() => {
     timeLeft--;
@@ -241,11 +248,13 @@ function stopTimer() {
     clearInterval(timerInterval);
     timerInterval = null;
   }
-  if (timerDisplay) {
-    timerDisplay.style.display = "none";
-    timerDisplay.classList.remove("timer-warning");
-  }
+  updateTimerDisplay(); // Will clear text if not set again
+  // Actually we might want to keep the last time or clear it? 
+  // Let's clear it for cleaner UI
+  if (timer1) timer1.textContent = "";
+  if (timer2) timer2.textContent = "";
 }
+
 
 async function handleTurnTimeout() {
   stopTimer();
@@ -1598,7 +1607,7 @@ function listenToGameUpdates() {
     if (isConnected === false && isOnlineMode && hasSeenOpponentConnected) {
       statusText.textContent = "🔴 Bağlantı Kesildi";
       opponentName.textContent = "Rakip: Ayrıldı";
-      alert("Rakip oyundan ayrıldı.");
+      await showAlert("Rakip oyundan ayrıldı.");
     } else if (isConnected === true) {
       hasSeenOpponentConnected = true;
       statusText.textContent = "🟢 Bağlı";
@@ -1607,7 +1616,17 @@ function listenToGameUpdates() {
       await updateOpponentInfo();
     }
   });
+
+  // Listen for Emojis
+  currentRoomRef.child(otherPlayer + '/latestEmoji').on('value', (snapshot) => {
+    const emojiData = snapshot.val(); // { emoji: "👋", timestamp: 12345 }
+    if (emojiData && emojiData.timestamp > (Date.now() - 5000)) {
+      // Only show if recent (5s)
+      showFloatingEmoji(emojiData.emoji, otherPlayer);
+    }
+  });
 }
+
 
 // Rakip bilgilerini güncelle
 async function updateOpponentInfo() {
@@ -2227,7 +2246,70 @@ newGameButton.addEventListener("click", async () => {
 
 
 // Sayfa yüklendiğinde oyunu başlat
+// Sayfa yüklendiğinde oyunu başlat
 initFirebase(); // Initialize Firebase immediately
+
+
+// ======================
+// EMOJI CHAT LOGIC
+// ======================
+async function sendEmoji(emojiChar) {
+  if (!isOnlineMode || !currentRoomRef) {
+    // Local mode: just show it locally for fun
+    showFloatingEmoji(emojiChar, "player1");
+    return;
+  }
+
+  const playerKey = myPlayerNumber === 1 ? 'player1' : 'player2';
+  try {
+    await currentRoomRef.child(playerKey + '/latestEmoji').set({
+      emoji: emojiChar,
+      timestamp: Date.now()
+    });
+    // Show on my screen too
+    showFloatingEmoji(emojiChar, playerKey);
+  } catch (e) {
+    console.error("Emoji error:", e);
+  }
+}
+
+function showFloatingEmoji(emoji, playerKey) {
+  // Determine target element (avatar)
+  let targetId = "";
+  if (isLocalMode) {
+    targetId = "player1Avatar"; // Local mode always player 1
+  } else {
+    // If I am player 1:
+    if (myPlayerNumber === 1) {
+      targetId = (playerKey === "player1") ? "player1Avatar" : "player2Avatar";
+    } else {
+      // I am player 2
+      targetId = (playerKey === "player2") ? "player2Avatar" : "player1Avatar";
+    }
+  }
+
+  const targetEl = document.getElementById(targetId);
+  const container = targetEl ? targetEl.parentElement : document.body;
+
+  const span = document.createElement("span");
+  span.textContent = emoji;
+  span.className = "floating-emoji";
+
+  // Position it relative to the avatar/header
+  if (targetEl && targetEl.parentElement) {
+    targetEl.parentElement.style.position = "relative"; // Ensure header is relative
+    span.style.left = "50%";
+    span.style.top = "50%";
+  }
+
+  container.appendChild(span);
+
+  // Remove after animation
+  setTimeout(() => {
+    span.remove();
+  }, 2000);
+}
+
 initGame();
 
 

@@ -1014,3 +1014,93 @@ h1 {
     font-weight: bold;
   }
 }
+
+/* Player Timer */
+.player-timer {
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  font-size: 16px;
+  color: #ffb74d;
+  background: #333;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #555;
+  margin-left: auto;
+  min-width: 60px;
+  text-align: center;
+}
+
+.player-timer.warning {
+  color: #ff5252;
+  border-color: #ff5252;
+  animation: pulse 1s infinite;
+}
+
+/* Emoji Bar */
+.emoji-bar {
+  display: flex;
+  gap: 8px;
+  padding: 8px 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 4px;
+  border-top: 1px solid #333;
+}
+
+.emoji-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid #444;
+  border-radius: 8px;
+  font-size: 20px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emoji-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.1);
+}
+
+.emoji-btn:active {
+  transform: scale(0.95);
+}
+
+/* Floating Emoji Animation */
+.floating-emoji {
+  position: absolute;
+  font-size: 40px;
+  pointer-events: none;
+  z-index: 2000;
+  animation: floatUp 2s ease-out forwards;
+}
+
+@keyframes floatUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.5);
+  }
+
+  10% {
+    opacity: 1;
+    transform: translateY(0) scale(1.2);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-100px) scale(1);
+  }
+}
+
+/* Adjustments for Mobile Bottom Bar */
+@media (max-width: 768px) {
+  .emoji-bar {
+    justify-content: start;
+    /* Allow scrolling from start */
+  }
+}

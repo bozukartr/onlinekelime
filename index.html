@@ -137,7 +137,9 @@
             <h2 class="player-title" id="player1Title">Sen</h2>
             <span class="player-subtitle" id="player1Subtitle"></span>
           </div>
+          <span id="timer1" class="player-timer"></span>
         </div>
+
         <div id="board1" class="board"></div>
         <button id="guessButton1" class="guess-button">Tahmini Kontrol Et</button>
         <div id="message1" class="message"></div>
@@ -150,7 +152,9 @@
             <h2 class="player-title" id="player2Title">Rakip</h2>
             <span class="player-subtitle" id="player2Subtitle"></span>
           </div>
+          <span id="timer2" class="player-timer"></span>
         </div>
+
         <div id="board2" class="board"></div>
         <button id="guessButton2" class="guess-button">Tahmini Kontrol Et</button>
         <div id="message2" class="message"></div>
@@ -180,10 +184,39 @@
       <div id="controls">
         <button id="resetButton" style="display: none;">Yeniden Başlat</button>
         <button id="newGameButton" style="display: none;">🎮 Yeni Oyun</button>
-        <div id="timerDisplay" class="timer-display" style="display: none;">⏳ 120</div>
+        <!-- Timer removed from here -->
         <button id="backToMenuBtn" class="menu-button">🏠 Ana Menü</button>
         <button id="disconnectBtn" class="disconnect-button">🚪 Ayrıl</button>
       </div>
+
+      <!-- Emoji Bar -->
+      <div id="emoji-bar" class="emoji-bar">
+        <button class="emoji-btn" onclick="sendEmoji('👋')">👋</button>
+        <button class="emoji-btn" onclick="sendEmoji('😂')">😂</button>
+        <button class="emoji-btn" onclick="sendEmoji('🤔')">🤔</button>
+        <button class="emoji-btn" onclick="sendEmoji('😱')">😱</button>
+        <button class="emoji-btn" onclick="sendEmoji('🔥')">🔥</button>
+        <button class="emoji-btn" onclick="sendEmoji('😡')">😡</button>
+        <button class="emoji-btn" onclick="sendEmoji('👏')">👏</button>
+        <button class="emoji-btn" onclick="sendEmoji('😭')">😭</button>
+        <button class="emoji-btn" onclick="sendEmoji('❤️')">❤️</button>
+        <!-- Romantic Emojis -->
+        <button class="emoji-btn" onclick="sendEmoji('🥰')">🥰</button>
+        <button class="emoji-btn" onclick="sendEmoji('😘')">😘</button>
+        <button class="emoji-btn" onclick="sendEmoji('😍')">😍</button>
+        <button class="emoji-btn" onclick="sendEmoji('💖')">💖</button>
+        <!-- Moody Emojis -->
+        <button class="emoji-btn" onclick="sendEmoji('😔')">😔</button>
+        <button class="emoji-btn" onclick="sendEmoji('😩')">😩</button>
+        <button class="emoji-btn" onclick="sendEmoji('😤')">😤</button>
+        <button class="emoji-btn" onclick="sendEmoji('😒')">😒</button>
+        <!-- Hand Gestures Emojis -->
+        <button class="emoji-btn" onclick="sendEmoji('👍')">👍</button>
+        <button class="emoji-btn" onclick="sendEmoji('👎')">👎</button>
+        <button class="emoji-btn" onclick="sendEmoji('🙏')">🙏</button>
+        <button class="emoji-btn" onclick="sendEmoji('🤞')">🤞</button>
+      </div>
+
     </div>
 
 
@@ -208,8 +241,9 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 
-  <script src="script.js?v=6"></script>
+  <script src="script.js?v=7"></script>
 </body>
+
 
 
 
