@@ -1,5 +1,7 @@
 // Kelime listesi words.txt dosyasından yüklenecek
+console.log("v2.5: AI Removed, Timer Added");
 let WORDS = [];
+
 
 const ROWS = 6;
 const COLS = 5;
