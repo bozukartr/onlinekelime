@@ -2113,5 +2113,7 @@ newGameButton.addEventListener("click", async () => {
 });
 
 // Sayfa yüklendiğinde oyunu başlat
+initFirebase(); // Initialize Firebase immediately
 initGame();
+
 
