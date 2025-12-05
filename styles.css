@@ -1098,6 +1098,74 @@ h1 {
 }
 
 /* Adjustments for Mobile Bottom Bar */
+
+/* Fog & Shake Animations */
+@keyframes shake {
+  0% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-5px);
+  }
+
+  50% {
+    transform: translateX(5px);
+  }
+
+  75% {
+    transform: translateX(-5px);
+  }
+
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.shake {
+  animation: shake 0.5s ease-in-out;
+  border-color: #ff4444 !important;
+}
+
+.fogged {
+  background-color: #555 !important;
+  color: #555 !important;
+  /* Hide letter? User said "not see any yellow letters". */
+  /* If I set color to transparent, they don't see the letter. */
+  /* If I set color to #eee (text), they see letter but background is gray. */
+  /* Let's try: Neutral background, Visible Text. */
+  color: #fff !important;
+  border-color: #777 !important;
+}
+
+/* Override colors when fogged */
+.fogged.correct,
+.fogged.present,
+.fogged.absent {
+  background-color: #333 !important;
+  border-color: #444 !important;
+}
+
+/* Second Chance Pulse */
+@keyframes shield-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.4);
+  }
+
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 152, 0, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 152, 0, 0);
+  }
+}
+
+#secondChanceBtn.active {
+  background-color: #ff9800 !important;
+  animation: shield-pulse 2s infinite;
+}
+
 @media (max-width: 768px) {
   .emoji-bar {
     justify-content: start;

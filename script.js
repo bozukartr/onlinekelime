@@ -82,6 +82,16 @@ const revealTileBtn = document.getElementById("revealTileBtn");
 const timer1 = document.getElementById("timer1");
 const timer2 = document.getElementById("timer2");
 
+// New Powerup Buttons
+const secondChanceBtn = document.getElementById("secondChanceBtn");
+const fogBtn = document.getElementById("fogBtn");
+
+// Power-up States
+let isSecondChanceActive = false;
+let isFogActive = false; // For me (buying it)
+let isFogged = false;    // For me (being victim)
+
+
 
 // Selection Mode State
 let isSelectingTile = false;
@@ -713,6 +723,37 @@ async function handleGuess(playerName, gridInputs, currentRow, messageEl, guessB
   colourRow(gridInputs, currentRow, result);
   const hasNewLocks = lockGreenPositions(result);
 
+  // Second Chance Check
+  if (isSecondChanceActive) {
+    if (guess !== secretWord) {
+      // Trigger Second Chance (Insurance)
+      messageEl.textContent = "🛡️ İkinci Şans Sizi Kurtardı!";
+      messageEl.className = "message win";
+
+      gridInputs[currentRow].forEach(inp => {
+        inp.value = "";
+        inp.classList.add("pulse"); // Using pulse since shake isn't defined yet or reuse warning pulse
+        // Or define shake in CSS later
+      });
+      setTimeout(() => {
+        gridInputs[currentRow].forEach(inp => inp.classList.remove("pulse"));
+        gridInputs[currentRow][0].focus();
+      }, 1000);
+
+      isSecondChanceActive = false;
+      if (secondChanceBtn) secondChanceBtn.classList.remove("active");
+
+      // Do not proceed (do not advance row, do not end game)
+      // But restart timer? Yes.
+      startTimer();
+      return;
+    } else {
+      // Correct guess, consume powerup
+      isSecondChanceActive = false;
+      if (secondChanceBtn) secondChanceBtn.classList.remove("active");
+    }
+  }
+
   if (guess === secretWord) {
     winner = playerName;
     messageEl.textContent = "🎉 KAZANDIN! Kelime: " + secretWord;
@@ -832,7 +873,25 @@ async function handleGuess(playerName, gridInputs, currentRow, messageEl, guessB
 // Tüm tahtaları yeni sıra için güncelle
 updateBoardsForTurn();
 
+
+// Reset Game Logic (Fix Powerup Reuse & Reset States)
 function resetGame(skipWordSelection = false, forceNewWord = false) {
+  // Reset Power-up States
+  isSelectingTile = false;
+  isSecondChanceActive = false;
+  isFogActive = false;
+  isFogged = false;
+
+  // Clear messages
+  if (messageEl1) { messageEl1.textContent = ""; messageEl1.className = "message"; }
+  if (messageEl2) { messageEl2.textContent = ""; messageEl2.className = "message"; }
+
+  // Re-enable buttons if they exist
+  if (revealLetterBtn) revealLetterBtn.disabled = false;
+  if (revealTileBtn) revealTileBtn.disabled = false;
+  if (secondChanceBtn) secondChanceBtn.disabled = false;
+  if (fogBtn) fogBtn.disabled = false;
+
   console.log("resetGame çağrıldı - skipWordSelection:", skipWordSelection, "forceNewWord:", forceNewWord, "Mevcut kelime:", secretWord);
 
   // Kelime seçimi
@@ -1153,13 +1212,39 @@ async function logout() {
 }
 
 // Sayfa yüklendiğinde kelimeleri yükle
+// Sayfa yüklendiğinde kelimeleri yükle
 async function initGame() {
   const loaded = await loadWords();
-  if (loaded) {
-    console.log('Oyun hazır!');
-  }
   initFirebase();
+
+  // Session Restore Logic
+  const savedRoom = localStorage.getItem('wordle_room');
+  const savedPlayer = localStorage.getItem('wordle_player');
+  const savedUid = localStorage.getItem('wordle_uid');
+
+  // Only auto-rejoin if we have specific room data and user is logged in (or was guest)
+  if (savedRoom && savedPlayer && loaded) {
+    console.log("Restoring session...", savedRoom);
+
+    // If we need auth, wait a bit for firebase auth to resolve? 
+    // Actually initFirebase sets up the listener. We might need to wait for onAuthStateChanged.
+    // But let's try a simple approach first: 
+    // If user was guest, no auth needed. If user was logged in, the auth listener will trigger updateScreens.
+    // We should wait until we know if we are logged in.
+
+    // A simple timeout or check state
+    setTimeout(() => {
+      if (currentUser && currentUser.uid === savedUid) {
+        // Logged in user matches
+        connectToRoom(savedRoom, parseInt(savedPlayer));
+      } else if (!savedUid && !currentUser) {
+        // Guest matches
+        connectToRoom(savedRoom, parseInt(savedPlayer));
+      }
+    }, 1000); // Small delay to let Auth settle
+  }
 }
+
 
 // Google giriş butonu
 document.getElementById("googleLoginBtn").addEventListener("click", () => {
@@ -1460,8 +1545,41 @@ async function joinRoom(roomCode) {
   }
 }
 
+// Re-connect helper (used by auto-rejoin)
+async function connectToRoom(roomCode, playerNumber) {
+  if (!database) return;
+
+  isOnlineMode = true;
+  myPlayerNumber = playerNumber;
+  currentRoomCode = roomCode;
+  currentRoomRef = database.ref('rooms/' + roomCode);
+
+  try {
+    const snapshot = await currentRoomRef.once('value');
+    const roomData = snapshot.val();
+
+    if (!roomData) {
+      console.error("Room missing");
+      localStorage.removeItem('wordle_room');
+      return;
+    }
+
+    secretWord = roomData.secretWord;
+    currentTurn = roomData.currentTurn;
+
+    // Re-attach listeners
+    listenToGameUpdates();
+    startOnlineGame();
+
+    console.log("Re-connected successfully to", roomCode);
+  } catch (e) {
+    console.error("Re-connect failed", e);
+  }
+}
+
 // Oyun güncellemelerini dinle (Firebase)
 function listenToGameUpdates() {
+
   if (!currentRoomRef) return;
 
   // Tahminleri dinle
@@ -1625,6 +1743,19 @@ function listenToGameUpdates() {
       showFloatingEmoji(emojiData.emoji, otherPlayer);
     }
   });
+
+  // Listen for Fog on ME
+  const myKey = 'player' + myPlayerNumber;
+  currentRoomRef.child(myKey + '/isFogged').on('value', async (snapshot) => {
+    const amIFogged = snapshot.val();
+    if (amIFogged === true) {
+      isFogged = true;
+      await showAlert("🌫️ Rakip sis bastı! Bir sonraki tahmininde renk göremeyeceksin.");
+    } else {
+      isFogged = false;
+    }
+  });
+
 }
 
 
@@ -1912,19 +2043,33 @@ function applyGuessToBoard(gridInputs, rowIndex, guess, result) {
     if (!input) continue;
 
     input.value = guess[c] || '';
-    input.classList.remove("correct", "present", "absent", "locked", "hint");
+    input.classList.remove("correct", "present", "absent", "locked", "hint", "fogged");
 
-    if (result[c] === "correct") {
-      input.classList.add("correct");
-    } else if (result[c] === "present") {
-      input.classList.add("present");
+    // Fog Check
+    if (isFogged) {
+      input.classList.add("fogged"); // New CSS class needed
+      // Don't add color classes
     } else {
-      input.classList.add("absent");
+      if (result[c] === "correct") {
+        input.classList.add("correct");
+      } else if (result[c] === "present") {
+        input.classList.add("present");
+      } else {
+        input.classList.add("absent");
+      }
     }
 
     input.disabled = true;
   }
+
+  // Clear fog after one turn
+  if (isFogged) {
+    isFogged = false;
+    const myKey = 'player' + myPlayerNumber;
+    if (currentRoomRef) currentRoomRef.child(myKey + '/isFogged').set(false);
+  }
 }
+
 
 // Bağlantıyı kes (Firebase)
 async function disconnect() {
@@ -1934,7 +2079,13 @@ async function disconnect() {
       const playerKey = myPlayerNumber === 1 ? 'player1' : 'player2';
       await currentRoomRef.child(playerKey + '/connected').set(false);
       currentRoomRef.off(); // Tüm dinleyicileri kapat
+
+      // Clear session
+      localStorage.removeItem('wordle_room');
+      localStorage.removeItem('wordle_player');
+      localStorage.removeItem('wordle_uid');
     } catch (error) {
+
       console.error("Bağlantı kesme hatası:", error);
     }
   }
@@ -2196,6 +2347,57 @@ async function handleTileSelection(row, col) {
     setTimeout(() => myMessageEl.textContent = "", 2000);
   }
 }
+
+// Second Chance Power-up
+if (secondChanceBtn) {
+  secondChanceBtn.addEventListener("click", async () => {
+    if (!currentUser || gameOver) return;
+    if (userCoins < 20) { await showAlert("Yeterli altınınız yok! (20)"); return; }
+    if (isSecondChanceActive) { await showAlert("Zaten aktif!"); return; }
+    if (!isMyTurn()) { await showAlert("Sıra sizde değil!"); return; } // Helper needed or check manually
+
+    await showConfirm("İkinci Şans: Sıradaki tahminin yanlışsa sayılmayacak. Emin misin? (20 Altın)").then(async (res) => {
+      if (res) {
+        await addCoins(-20);
+        isSecondChanceActive = true;
+        secondChanceBtn.classList.add("active"); // Need CSS for active state
+        showAlert("🛡️ İkinci Şans Aktif! Yanlış tahmin yapmaktan korkma.");
+      }
+    });
+  });
+}
+
+
+// Fog Power-up
+if (fogBtn) {
+  fogBtn.addEventListener("click", async () => {
+    if (!currentUser || gameOver) return;
+    if (userCoins < 20) { await showAlert("Yeterli altınınız yok! (20)"); return; }
+    // Fog logic: Update firebase 'fog' state? 
+    // Or simpler: Send a specific 'event' to opponent?
+    // Let's use a room property: player1Ref/fogged = true
+
+    if (!currentRoomRef) return; // Only online? user requested for "Online/Local" but "opponent" implies online mostly. In local it works too if we switch turns.
+
+    await showConfirm("Sis: Rakibinin bir sonraki hamlesinde renkleri gizle. (20 Altın)").then(async (res) => {
+      if (res) {
+        await addCoins(-20);
+
+        // Target opponent
+        const targetPlayer = myPlayerNumber === 1 ? "player2" : "player1";
+        // We need to set a flag that the opponent listens to.
+        // Let's perform a direct update to rooms/{id}/{targetPlayer}/isFogged = true
+        await currentRoomRef.child(targetPlayer + '/isFogged').set(true);
+
+        showAlert("🌫️ Sis Bombası Atıldı!");
+      }
+    });
+  });
+}
+
+// Listen for Fog (in connectToRoom or similar)
+// We need to add this listener inside connectToRoom
+
 
 
 // Pas Geç butonu kaldırıldı
