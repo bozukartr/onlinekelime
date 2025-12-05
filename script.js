@@ -2354,7 +2354,8 @@ if (secondChanceBtn) {
     if (!currentUser || gameOver) return;
     if (userCoins < 20) { await showAlert("Yeterli altınınız yok! (20)"); return; }
     if (isSecondChanceActive) { await showAlert("Zaten aktif!"); return; }
-    if (!isMyTurn()) { await showAlert("Sıra sizde değil!"); return; } // Helper needed or check manually
+    const checkTurn = isLocalMode || (isOnlineMode && currentTurn === ("player" + myPlayerNumber));
+    if (!checkTurn) { await showAlert("Sıra sizde değil!"); return; }
 
     await showConfirm("İkinci Şans: Sıradaki tahminin yanlışsa sayılmayacak. Emin misin? (20 Altın)").then(async (res) => {
       if (res) {
