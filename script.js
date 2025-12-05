@@ -83,7 +83,53 @@ let isSelectingTile = false;
 
 
 
+
+// Modal Helper Functions
+
+const customModal = document.getElementById('customModal');
+const modalTitle = document.getElementById('modalTitle');
+const modalMessage = document.getElementById('modalMessage');
+const modalActions = document.getElementById('modalActions');
+
+function showModal(title, message, buttons) {
+  return new Promise((resolve) => {
+    if (!customModal) return resolve(null);
+
+    modalTitle.textContent = title;
+    modalMessage.textContent = message;
+    modalActions.innerHTML = '';
+
+    buttons.forEach(btn => {
+      const buttonEl = document.createElement('button');
+      buttonEl.textContent = btn.text;
+      buttonEl.className = `modal-btn ${btn.class || ''}`;
+      buttonEl.onclick = () => {
+        customModal.style.display = 'none';
+        resolve(btn.value);
+      };
+      modalActions.appendChild(buttonEl);
+    });
+
+    customModal.style.display = 'flex';
+  });
+}
+
+async function showAlert(message, title = "Bilgi") {
+  return showModal(title, message, [
+    { text: 'Tamam', value: true, class: 'modal-btn-confirm' }
+  ]);
+}
+
+async function showConfirm(message, title = "Onay") {
+  return showModal(title, message, [
+    { text: 'İptal', value: false, class: 'modal-btn-cancel' },
+    { text: 'Evet', value: true, class: 'modal-btn-confirm' }
+  ]);
+}
+
+
 // Kelime listesini words.txt dosyasından yükle
+
 async function loadWords() {
   try {
     const response = await fetch('words.txt');
@@ -97,8 +143,9 @@ async function loadWords() {
     return true;
   } catch (error) {
     console.error('Kelime listesi yüklenemedi:', error);
-    alert('Kelime listesi yüklenemedi. Lütfen sayfayı yenileyin.');
+    await showAlert('Kelime listesi yüklenemedi. Lütfen sayfayı yenileyin.', 'Hata');
     return false;
+
   }
 }
 
@@ -1195,18 +1242,22 @@ document.getElementById("joinRoomBtn").addEventListener("click", () => {
 });
 
 // Bağlan
-document.getElementById("connectBtn").addEventListener("click", () => {
+// Bağlan
+document.getElementById("connectBtn").addEventListener("click", async () => {
   const roomCode = roomCodeInput.value.trim().toUpperCase();
   if (roomCode) {
     if (roomCode.length < 4) {
-      alert("Oda kodu çok kısa.");
+      await showAlert("Oda kodu çok kısa.");
       return;
     }
+
     joinRoom(roomCode);
   } else {
-    alert("Lütfen oda kodunu girin.");
+    await showAlert("Lütfen oda kodunu girin.");
   }
 });
+
+
 
 // Kodu kopyala
 document.getElementById("copyCodeBtn").addEventListener("click", () => {
@@ -1220,12 +1271,13 @@ document.getElementById("copyCodeBtn").addEventListener("click", () => {
 });
 
 // Ana menüye dön
-document.getElementById("backToMenuBtn").addEventListener("click", () => {
+document.getElementById("backToMenuBtn").addEventListener("click", async () => {
   if (isOnlineMode) {
-    if (confirm("Online oyundan ayrılmak istediğinize emin misiniz?")) {
+    if (await showConfirm("Online oyundan ayrılmak istediğinize emin misiniz?")) {
       disconnect();
     }
   } else {
+
     // Lokal modda direkt ana menüye dön
     gameScreen.style.display = "none";
     connectionScreen.style.display = "block";
@@ -1768,10 +1820,8 @@ function showNewGameButton() {
   if (resetButton) {
     resetButton.style.display = "none";
   }
-  if (passButton) {
-    passButton.style.display = "none";
-  }
 }
+
 
 // Yeni Oyun butonunu gizle
 function hideNewGameButton() {
@@ -1951,14 +2001,15 @@ async function updateUserStats(won) {
 // Power-up: Rastgele Harf Göster (10 altın)
 revealLetterBtn.addEventListener("click", async () => {
   if (!currentUser) {
-    alert("Bu özelliği kullanmak için giriş yapmalısınız!");
+    await showAlert("Bu özelliği kullanmak için giriş yapmalısınız!");
     return;
   }
 
   if (gameOver) {
-    alert("Oyun bitti!");
+    await showAlert("Oyun bitti!");
     return;
   }
+
 
   if (isSelectingTile) {
     isSelectingTile = false;
@@ -1968,20 +2019,22 @@ revealLetterBtn.addEventListener("click", async () => {
   }
 
   if (userCoins < 10) {
-    alert("Yeterli altınınız yok! Gereken: 10 💰");
+    await showAlert("Yeterli altınınız yok! Gereken: 10 💰");
     return;
   }
 
   // Lokal modda veya kendi sıramda
+
   const myGridInputs = isLocalMode ? gridInputs1 : (myPlayerNumber === 1 ? gridInputs1 : gridInputs2);
   const myCurrentRow = isLocalMode ? currentRow1 : (myPlayerNumber === 1 ? currentRow1 : currentRow2);
 
   if (myCurrentRow >= ROWS) {
-    alert("Tahmin hakkınız kalmadı!");
+    await showAlert("Tahmin hakkınız kalmadı!");
     return;
   }
 
   // Henüz bulunmamış bir harfi göster
+
   const unlockedIndices = [];
   for (let i = 0; i < COLS; i++) {
     if (!lockedPositions[i]) {
@@ -1990,11 +2043,13 @@ revealLetterBtn.addEventListener("click", async () => {
   }
 
   if (unlockedIndices.length === 0) {
-    alert("Tüm harfler zaten bulunmuş!");
+    await showAlert("Tüm harfler zaten bulunmuş!");
     return;
   }
 
+
   // Rastgele bir harf seç
+
   const randomIndex = unlockedIndices[Math.floor(Math.random() * unlockedIndices.length)];
   const revealedLetter = secretWord[randomIndex];
 
@@ -2018,31 +2073,33 @@ revealLetterBtn.addEventListener("click", async () => {
   // Altın düş
   await addCoins(-10);
 
-  alert(`💡 Harf gösterildi: ${revealedLetter} (${randomIndex + 1}. pozisyon)`);
+  await showAlert(`💡 Harf gösterildi: ${revealedLetter} (${randomIndex + 1}. pozisyon)`);
 });
 
 // Power-up: Harf Seç (20 altın)
-revealTileBtn.addEventListener("click", () => {
+revealTileBtn.addEventListener("click", async () => {
   if (!currentUser) {
-    alert("Bu özelliği kullanmak için giriş yapmalısınız!");
+    await showAlert("Bu özelliği kullanmak için giriş yapmalısınız!");
     return;
   }
 
   if (gameOver) {
-    alert("Oyun bitti!");
+    await showAlert("Oyun bitti!");
     return;
   }
 
   if (userCoins < 20) {
-    alert("Yeterli altınınız yok! Gereken: 20 💰");
+    await showAlert("Yeterli altınınız yok! Gereken: 20 💰");
     return;
   }
 
+
   const isMyTurn = isLocalMode || (isOnlineMode && currentTurn === ("player" + myPlayerNumber));
   if (!isMyTurn) {
-    alert("Sıra sizde değilken harf seçemezsiniz!");
+    await showAlert("Sıra sizde değilken harf seçemezsiniz!");
     return;
   }
+
 
   isSelectingTile = !isSelectingTile;
 
@@ -2050,8 +2107,9 @@ revealTileBtn.addEventListener("click", () => {
   const myMessageEl = isLocalMode ? messageEl1 : (myPlayerNumber === 1 ? messageEl1 : messageEl2);
 
   if (isSelectingTile) {
-    alert("Şimdi harfini görmek istediğin kutucuğa tıkla!");
+    await showAlert("Şimdi harfini görmek istediğin kutucuğa tıkla!");
     if (myMessageEl) {
+
       myMessageEl.textContent = "👆 Kutucuğa tıkla!";
       myMessageEl.classList.add("pulse");
     }
@@ -2072,21 +2130,24 @@ async function handleTileSelection(row, col) {
 
   // Sadece aktif satırdaki kutucuklara tıklanabilir
   if (row !== myCurrentRow) {
-    alert("Sadece aktif satırdaki (şu anki tahmin sırası) kutucukları seçebilirsiniz!");
+    await showAlert("Sadece aktif satırdaki (şu anki tahmin sırası) kutucukları seçebilirsiniz!");
     return;
   }
+
 
   if (lockedPositions[col]) {
-    alert("Bu harf zaten bulunmuş!");
+    await showAlert("Bu harf zaten bulunmuş!");
     isSelectingTile = false;
     return;
   }
 
+
   if (userCoins < 20) {
-    alert("Yeterli altınınız yok!");
+    await showAlert("Yeterli altınınız yok!");
     isSelectingTile = false;
     return;
   }
+
 
   // Reveal Logic similar to random but specific col
   const revealedLetter = secretWord[col];
@@ -2160,9 +2221,10 @@ newGameButton.addEventListener("click", async () => {
     // Lokal modda yeni oyun
     resetGame(false, true); // forceNewWord = true
   } else if (isOnlineMode && myPlayerNumber === 2) {
-    alert("Sadece oda sahibi yeni oyun başlatabilir.");
+    await showAlert("Sadece oda sahibi yeni oyun başlatabilir.");
   }
 });
+
 
 // Sayfa yüklendiğinde oyunu başlat
 initFirebase(); // Initialize Firebase immediately
