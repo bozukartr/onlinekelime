@@ -660,6 +660,27 @@ h1 {
   transform: scale(0.98);
 }
 
+.timer-display {
+  background: #333;
+  color: #ffb74d;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: 2px solid #555;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+}
+
+.timer-warning {
+  color: #ff5252;
+  border-color: #ff5252;
+  animation: pulse 1s infinite;
+}
+
 /* Power-ups */
 #powerups-container {
   width: 100%;
