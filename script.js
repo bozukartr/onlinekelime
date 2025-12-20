@@ -372,7 +372,7 @@ function createBoard(boardEl, gridInputs, guessButton) {
             nextIndex++;
           }
           if (nextIndex < COLS) {
-            rowInputs[nextIndex].focus();
+            rowInputs[nextIndex].focus({ preventScroll: true });
           }
         }
       });
@@ -385,7 +385,7 @@ function createBoard(boardEl, gridInputs, guessButton) {
             prevIndex--;
           }
           if (prevIndex >= 0) {
-            rowInputs[prevIndex].focus();
+            rowInputs[prevIndex].focus({ preventScroll: true });
           }
         } else if (e.key === "Enter") {
           e.preventDefault();
@@ -463,7 +463,7 @@ function setActiveRow(gridInputs, rowIndex, currentRowRef, firstLetterHintGivenR
     for (let c = 0; c < COLS; c++) {
       const input = gridInputs[rowIndex][c];
       if (!input.disabled) {
-        input.focus();
+        input.focus({ preventScroll: true });
         focused = true;
         break;
       }
@@ -664,7 +664,7 @@ function updateBoardsForTurn() {
       for (let c = 0; c < COLS; c++) {
         const input = gridInputs1[currentRow1][c];
         if (input && !input.disabled) {
-          input.focus();
+          input.focus({ preventScroll: true });
           break;
         }
       }
@@ -672,7 +672,7 @@ function updateBoardsForTurn() {
       for (let c = 0; c < COLS; c++) {
         const input = gridInputs2[currentRow2][c];
         if (input && !input.disabled) {
-          input.focus();
+          input.focus({ preventScroll: true });
           break;
         }
       }

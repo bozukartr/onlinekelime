@@ -1105,11 +1105,12 @@ body:has(#game-screen[style*="display: block"]) #connection-status {
   }
 
   .player-section {
-    width: fit-content;
-    max-width: min(95vw, 360px);
-    padding: 12px 8px;
+    width: 100%;
+    max-width: 360px;
+    padding: 12px 6px;
     border-width: 1px;
     margin: 0 auto;
+    overflow-x: hidden;
   }
 
   .player-section.active {
@@ -1120,12 +1121,18 @@ body:has(#game-screen[style*="display: block"]) #connection-status {
   /* Game Board & Scaling */
   .board {
     margin: 0 auto 8px;
-    max-width: min(90vw, 320px);
-    gap: 3px;
+    width: 100%;
+    max-width: 300px;
+    gap: 4px;
+    overflow-x: hidden;
   }
 
   .tile {
     font-size: 18px;
+    width: calc((100% - 16px) / 5) !important;
+    /* 4 gaps of 4px = 16px */
+    padding: 0;
+    /* Remove padding to keep caret centered and avoid shifts */
   }
 
   .tile:focus {
@@ -1135,7 +1142,8 @@ body:has(#game-screen[style*="display: block"]) #connection-status {
 
   /* Tabs as Headers on Mobile */
   .tabs-container {
-    max-width: min(90vw, 320px);
+    width: 100%;
+    max-width: 300px;
     margin: 0 auto 12px;
     gap: 6px;
   }
@@ -1174,6 +1182,9 @@ body:has(#game-screen[style*="display: block"]) #connection-status {
     gap: 10px;
     padding: 10px;
     border-radius: 12px;
+    width: 100%;
+    max-width: 360px;
+    margin: 0 auto;
   }
 
   #controls {
