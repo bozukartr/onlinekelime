@@ -2,9 +2,14 @@
   "rules": {
     "rooms": {
       "$roomId": {
-        ".read": true,
-        ".write": true,
-        ".indexOn": ["createdAt"]
+        ".read": "true",
+        ".write": "(!data.exists() || data.child('player1/uid').val() == auth.uid || data.child('player2/uid').val() == auth.uid || auth.uid == null)",
+        ".indexOn": [
+          "createdAt"
+        ],
+        "secretWord": {
+          ".validate": "newData.isString() && newData.val().length == 5"
+        }
       }
     },
     "users": {
@@ -27,4 +32,3 @@
     }
   }
 }
-

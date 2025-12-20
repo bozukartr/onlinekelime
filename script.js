@@ -1,5 +1,4 @@
 // Kelime listesi words.txt dosyasından yüklenecek
-console.log("v2.5: AI Removed, Timer Added");
 let WORDS = [];
 
 
@@ -73,6 +72,13 @@ const roomCodeDisplay = document.getElementById("roomCodeDisplay");
 const roomCodeInput = document.getElementById("roomCodeInput");
 const statusText = document.getElementById("statusText");
 const opponentName = document.getElementById("opponentName");
+
+// Tab Elements
+const gameTabs = document.getElementById("game-tabs");
+const tabPlayer1 = document.getElementById("tabPlayer1");
+const tabPlayer2 = document.getElementById("tabPlayer2");
+const player1Section = document.getElementById("player1Section");
+const player2Section = document.getElementById("player2Section");
 // passButton removed
 const powerupsContainer = document.getElementById("powerups-container");
 const revealLetterBtn = document.getElementById("revealLetterBtn");
@@ -82,12 +88,9 @@ const revealTileBtn = document.getElementById("revealTileBtn");
 const timer1 = document.getElementById("timer1");
 const timer2 = document.getElementById("timer2");
 
-// New Powerup Buttons
-const secondChanceBtn = document.getElementById("secondChanceBtn");
 const fogBtn = document.getElementById("fogBtn");
 
 // Power-up States
-let isSecondChanceActive = false;
 let isFogActive = false; // For me (buying it)
 let isFogged = false;    // For me (being victim)
 
@@ -154,7 +157,6 @@ async function loadWords() {
       .map(word => word.trim())
       .filter(word => word.length === 5); // Sadece 5 harfli kelimeleri al
 
-    console.log(`${WORDS.length} kelime yüklendi.`);
     return true;
   } catch (error) {
     console.error('Kelime listesi yüklenemedi:', error);
@@ -271,7 +273,6 @@ async function handleTurnTimeout() {
 
   if (gameOver) return;
 
-  console.log("Süre doldu! Sıra geçiyor...");
 
   let gridInputs, currentRow, messageEl;
 
@@ -488,7 +489,6 @@ function getGuessFromRow(gridInputs, rowIndex) {
 }
 
 function evaluateGuess(guess) {
-  console.log("Tahmin değerlendiriliyor - Guess:", guess, "Target:", secretWord);
 
   const result = new Array(COLS).fill("absent");
   const targetArr = secretWord.split("");
@@ -517,7 +517,6 @@ function evaluateGuess(guess) {
     }
   }
 
-  console.log("Sonuç:", result);
   return result;
 }
 
@@ -723,36 +722,6 @@ async function handleGuess(playerName, gridInputs, currentRow, messageEl, guessB
   colourRow(gridInputs, currentRow, result);
   const hasNewLocks = lockGreenPositions(result);
 
-  // Second Chance Check
-  if (isSecondChanceActive) {
-    if (guess !== secretWord) {
-      // Trigger Second Chance (Insurance)
-      messageEl.textContent = "🛡️ İkinci Şans Sizi Kurtardı!";
-      messageEl.className = "message win";
-
-      gridInputs[currentRow].forEach(inp => {
-        inp.value = "";
-        inp.classList.add("pulse"); // Using pulse since shake isn't defined yet or reuse warning pulse
-        // Or define shake in CSS later
-      });
-      setTimeout(() => {
-        gridInputs[currentRow].forEach(inp => inp.classList.remove("pulse"));
-        gridInputs[currentRow][0].focus();
-      }, 1000);
-
-      isSecondChanceActive = false;
-      if (secondChanceBtn) secondChanceBtn.classList.remove("active");
-
-      // Do not proceed (do not advance row, do not end game)
-      // But restart timer? Yes.
-      startTimer();
-      return;
-    } else {
-      // Correct guess, consume powerup
-      isSecondChanceActive = false;
-      if (secondChanceBtn) secondChanceBtn.classList.remove("active");
-    }
-  }
 
   if (guess === secretWord) {
     winner = playerName;
@@ -776,17 +745,14 @@ async function handleGuess(playerName, gridInputs, currentRow, messageEl, guessB
     const isMyWin = (playerName === "player1" && (isLocalMode || myPlayerNumber === 1)) ||
       (playerName === "player2" && myPlayerNumber === 2);
 
-    console.log("Kazanma kontrolü - playerName:", playerName, "myPlayerNumber:", myPlayerNumber, "isMyWin:", isMyWin);
 
     if (isMyWin && currentUser) {
-      console.log("Altın kazanıldı: +10");
       await addCoins(10); // Kazanma ödülü: 10 altın
 
       // İstatistikleri güncelle
       await updateUserStats(true);
     }
 
-    // Kelimenin anlamını göster (Kaldirildi)
 
     // Online modda rakibe bildir
     if (isOnlineMode) {
@@ -824,7 +790,6 @@ async function handleGuess(playerName, gridInputs, currentRow, messageEl, guessB
         messageEl2.className = "message neutral";
       }
 
-      // Anlamı göster (Kaldirildi)
     } else {
       // Sıra diğer oyuncuya geçer
       currentTurn = playerName === "player1" ? "player2" : "player1";
@@ -878,7 +843,6 @@ updateBoardsForTurn();
 function resetGame(skipWordSelection = false, forceNewWord = false) {
   // Reset Power-up States
   isSelectingTile = false;
-  isSecondChanceActive = false;
   isFogActive = false;
   isFogged = false;
 
@@ -889,10 +853,8 @@ function resetGame(skipWordSelection = false, forceNewWord = false) {
   // Re-enable buttons if they exist
   if (revealLetterBtn) revealLetterBtn.disabled = false;
   if (revealTileBtn) revealTileBtn.disabled = false;
-  if (secondChanceBtn) secondChanceBtn.disabled = false;
   if (fogBtn) fogBtn.disabled = false;
 
-  console.log("resetGame çağrıldı - skipWordSelection:", skipWordSelection, "forceNewWord:", forceNewWord, "Mevcut kelime:", secretWord);
 
   // Kelime seçimi
   if (forceNewWord) {
@@ -903,25 +865,20 @@ function resetGame(skipWordSelection = false, forceNewWord = false) {
     } else {
       currentTurn = Math.random() < 0.5 ? "player1" : "player2";
     }
-    console.log(">>> ZORLA YENİ KELİME SEÇİLDİ:", secretWord);
   } else if (skipWordSelection) {
     // MEVCUT KELİMEYİ KULLAN - HİÇBİR ŞEKLE DEĞİŞTİRME!
-    console.log(">>> MEVCUT KELIME KORUNUYOR:", secretWord);
   } else {
     // Yeni kelime seç
     if (isLocalMode) {
       secretWord = pickRandomWord();
       currentTurn = "player1";
-      console.log(">>> YENİ KELIME SEÇİLDİ (Lokal):", secretWord);
     } else if (isOnlineMode && myPlayerNumber === 1) {
       // Oyuncu 1 için - ama sadece ilk seferde!
       // createRoom'da zaten seçilmişse tekrar seçme
       if (!secretWord || secretWord === "HATA!") {
         secretWord = pickRandomWord();
         currentTurn = Math.random() < 0.5 ? "player1" : "player2";
-        console.log(">>> YENİ KELIME SEÇİLDİ (Online-P1):", secretWord);
       } else {
-        console.log(">>> MEVCUT KELIME KULLANILIYOR (Online-P1):", secretWord);
       }
     }
   }
@@ -971,7 +928,6 @@ function resetGame(skipWordSelection = false, forceNewWord = false) {
     updateBoardsForTurn();
   }
 
-  console.log("Reset tamamlandı - Kelime:", secretWord, "Sıra:", currentTurn, "Mod:", isLocalMode ? "Lokal" : "Online");
 }
 
 // ======================
@@ -986,13 +942,11 @@ function initFirebase() {
     }
     database = firebase.database();
     auth = firebase.auth();
-    console.log('Firebase bağlantısı kuruldu.');
 
     // Auth durumunu dinle
     auth.onAuthStateChanged((user) => {
       if (user) {
         currentUser = user;
-        console.log('Kullanıcı giriş yaptı:', user.displayName);
         showUserProfile(user);
         loadUserData(user.uid);
 
@@ -1001,7 +955,6 @@ function initFirebase() {
         document.getElementById("mode-selection").style.display = "block";
       } else {
         currentUser = null;
-        console.log('Kullanıcı çıkış yaptı veya giriş yapmamış');
         hideUserProfile();
 
         // Giriş ekranını göster
@@ -1028,7 +981,6 @@ async function loginWithGoogle() {
     const result = await auth.signInWithPopup(provider);
     const user = result.user;
 
-    console.log('Google girişi başarılı:', user.displayName);
 
     // Kullanıcı veritabanını oluştur/güncelle
     await initializeUserData(user.uid, user.displayName, user.photoURL);
@@ -1038,7 +990,6 @@ async function loginWithGoogle() {
   } catch (error) {
     console.error('Google giriş hatası:', error);
     if (error.code === 'auth/popup-closed-by-user') {
-      console.log('Kullanıcı popup\'ı kapattı');
     } else {
       alert('Giriş yapılamadı: ' + error.message);
     }
@@ -1061,7 +1012,6 @@ async function initializeUserData(uid, displayName, photoURL) {
         gamesWon: 0,
         createdAt: Date.now()
       });
-      console.log('Yeni kullanıcı oluşturuldu');
     } else {
       // Mevcut kullanıcı, profil bilgilerini güncelle
       await userRef.update({
@@ -1085,7 +1035,6 @@ async function loadUserData(uid) {
     if (userData) {
       userCoins = userData.coins || 0;
       updateCoinsDisplay();
-      console.log('Kullanıcı verisi yüklendi - Altın:', userCoins);
     }
   } catch (error) {
     console.error('Kullanıcı verisi yükleme hatası:', error);
@@ -1095,7 +1044,6 @@ async function loadUserData(uid) {
 // Altın ekle/çıkar
 async function addCoins(amount) {
   if (!currentUser) {
-    console.log('Kullanıcı giriş yapmamış, altın işlemi yapılamıyor');
     return;
   }
 
@@ -1111,7 +1059,6 @@ async function addCoins(amount) {
     });
 
     updateCoinsDisplay();
-    console.log('Altın değişti:', amount, 'Toplam:', userCoins);
 
     // Altın animasyonu
     showCoinAnimation(amount);
@@ -1196,7 +1143,6 @@ async function logout() {
 
   try {
     await auth.signOut();
-    console.log('Çıkış yapıldı');
 
     // onAuthStateChanged otomatik olarak ekranları değiştirecek
     // Oyun ekranındaysa ana menüye dön
@@ -1224,7 +1170,6 @@ async function initGame() {
 
   // Only auto-rejoin if we have specific room data and user is logged in (or was guest)
   if (savedRoom && savedPlayer && loaded) {
-    console.log("Restoring session...", savedRoom);
 
     // If we need auth, wait a bit for firebase auth to resolve? 
     // Actually initFirebase sets up the listener. We might need to wait for onAuthStateChanged.
@@ -1233,15 +1178,19 @@ async function initGame() {
     // We should wait until we know if we are logged in.
 
     // A simple timeout or check state
-    setTimeout(() => {
-      if (currentUser && currentUser.uid === savedUid) {
-        // Logged in user matches
-        connectToRoom(savedRoom, parseInt(savedPlayer));
-      } else if (!savedUid && !currentUser) {
-        // Guest matches
-        connectToRoom(savedRoom, parseInt(savedPlayer));
+    // Use an interval to wait for auth to settle, but no more than 3 seconds
+    let attempts = 0;
+    const authCheckInterval = setInterval(() => {
+      attempts++;
+      if (currentUser || attempts > 6) { // 6 * 500ms = 3s
+        clearInterval(authCheckInterval);
+        if (currentUser && currentUser.uid === savedUid) {
+          connectToRoom(savedRoom, parseInt(savedPlayer));
+        } else if (!savedUid && !currentUser) {
+          connectToRoom(savedRoom, parseInt(savedPlayer));
+        }
       }
-    }, 1000); // Small delay to let Auth settle
+    }, 500);
   }
 }
 
@@ -1255,7 +1204,6 @@ document.getElementById("googleLoginBtn").addEventListener("click", () => {
 document.getElementById("skipLoginBtn").addEventListener("click", () => {
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("mode-selection").style.display = "block";
-  console.log('Misafir olarak devam edildi');
 });
 
 // Çıkış butonu
@@ -1292,6 +1240,14 @@ document.getElementById("localModeBtn").addEventListener("click", async () => {
   // Power-ups'ı göster (sadece giriş yaptıysa)
   if (currentUser && powerupsContainer) {
     powerupsContainer.style.display = "block";
+  }
+
+  // Lokal modda sadece ilk tabı başlık olarak kullan
+  if (gameTabs) {
+    gameTabs.style.display = "flex";
+    tabPlayer1.style.pointerEvents = "none"; // Tıklanamaz olsun
+    tabPlayer2.style.display = "none";
+    tabPlayer1.classList.add("active");
   }
 
   resetGame();
@@ -1384,6 +1340,13 @@ document.getElementById("backToMenuBtn").addEventListener("click", async () => {
     isOnlineMode = false;
     myPlayerNumber = 0;
 
+    // Reset tabs
+    if (gameTabs) {
+      gameTabs.style.display = "none";
+      tabPlayer1.style.pointerEvents = "auto";
+      tabPlayer2.style.display = "flex";
+    }
+
     // Oyun durumunu sıfırla
     gameOver = false;
     currentRow1 = 0;
@@ -1446,14 +1409,12 @@ async function createRoom() {
       createdAt: Date.now()
     });
 
-    console.log("Firebase'e kaydedilen kelime:", secretWord);
 
     // Oda kodunu göster
     roomCodeDisplay.value = currentRoomCode;
     document.querySelector(".online-buttons").style.display = "none";
     roomInfo.style.display = "block";
 
-    console.log("Oda oluşturuldu:", currentRoomCode);
 
     // Oyun verilerini dinlemeye başla (Player1 için)
     listenToGameUpdates();
@@ -1463,7 +1424,6 @@ async function createRoom() {
     currentRoomRef.child('player2/connected').on('value', (snapshot) => {
       if (snapshot.val() === true && !hasPlayer2Joined) {
         hasPlayer2Joined = true;
-        console.log("Oyuncu 2 katıldı!");
 
         // Oyunu başlat
         startOnlineGame();
@@ -1524,11 +1484,6 @@ async function joinRoom(roomCode) {
     currentRow1 = roomData.player1?.currentRow || 0;
     currentRow2 = roomData.player2?.currentRow || 0;
 
-    console.log("========================================");
-    console.log("Odaya katılındı:", roomCode);
-    console.log("FIREBASE'DEN ALINAN KELİME:", secretWord);
-    console.log("Başlangıç sırası:", currentTurn);
-    console.log("========================================");
 
     // ÖNCE oyun verilerini dinlemeye başla
     listenToGameUpdates();
@@ -1559,7 +1514,6 @@ async function connectToRoom(roomCode, playerNumber) {
     const roomData = snapshot.val();
 
     if (!roomData) {
-      console.error("Room missing");
       localStorage.removeItem('wordle_room');
       return;
     }
@@ -1571,7 +1525,6 @@ async function connectToRoom(roomCode, playerNumber) {
     listenToGameUpdates();
     startOnlineGame();
 
-    console.log("Re-connected successfully to", roomCode);
   } catch (e) {
     console.error("Re-connect failed", e);
   }
@@ -1592,7 +1545,6 @@ function listenToGameUpdates() {
       // Yeni tahmin geldi
       lastProcessedTimestamp = guessData.timestamp;
       applyOpponentGuess(guessData);
-      console.log("Rakip tahmini uygulandı:", guessData);
     }
   });
 
@@ -1601,7 +1553,6 @@ function listenToGameUpdates() {
     const meaning = snapshot.val();
     if (meaning && gameOver) {
       // Anlam Firebase'e yazıldı, her iki oyuncuya da göster
-      console.log('Anlam Firebase\'den alındı:', meaning);
 
       if (messageEl1 && messageEl1.textContent.includes(secretWord)) {
         const currentMsg = messageEl1.textContent.replace('Anlam yükleniyor...', '').replace(/\n\n📖 .*/s, '');
@@ -1631,14 +1582,12 @@ function listenToGameUpdates() {
           currentRoomRef.once('value').then((snap) => {
             const roomData = snap.val();
             if (roomData) {
-              console.log("Reset algılandı, veriler güncelleniyor...");
               secretWord = roomData.secretWord;
               currentTurn = roomData.currentTurn;
               lockedPositions = roomData.lockedPositions || [false, false, false, false, false];
               currentRow1 = roomData.player1?.currentRow || 0;
               currentRow2 = roomData.player2?.currentRow || 0;
 
-              console.log("Senkronize edilen kelime:", secretWord);
               resetGame(true);
             }
           });
@@ -1688,7 +1637,6 @@ function listenToGameUpdates() {
 
       // Sıra değiştiyse zamanlayıcıyı yeniden başlat
       if (oldTurn !== currentTurn) {
-        console.log("Sıra değişti:", oldTurn, "→", currentTurn);
       }
 
       updateBoardsForTurn();
@@ -1833,7 +1781,6 @@ async function updateOpponentInfo() {
       }
     }
 
-    console.log('Oyuncu bilgileri güncellendi');
   } catch (error) {
     console.error('Rakip bilgisi alma hatası:', error);
   }
@@ -1845,9 +1792,12 @@ async function startOnlineGame() {
   gameScreen.style.display = "block";
   document.getElementById("connection-status").style.display = "flex";
 
-  // Online modda her iki board'u da göster
-  document.getElementById("player1Section").style.display = "flex";
-  document.getElementById("player2Section").style.display = "flex";
+  // Online modda sekme sistemini göster
+  if (gameTabs) {
+    gameTabs.style.display = "flex";
+    // Varsayılan olarak Player 1 (Kendi) tabını aktif et
+    switchTab("player1");
+  }
 
   document.getElementById("player1Title").textContent = myPlayerNumber === 1 ? "Sen" : "Rakip";
   document.getElementById("player2Title").textContent = myPlayerNumber === 2 ? "Sen" : "Rakip";
@@ -1862,10 +1812,6 @@ async function startOnlineGame() {
   // Her iki oyuncu da board'u oluşturmalı
   if (myPlayerNumber === 1) {
     // Oyun sahibi board'u oluşturur (kelime zaten createRoom'da seçildi)
-    console.log("========================================");
-    console.log("OYUNCU 1 - BOARD OLUŞTURULUYOR");
-    console.log("Kullanılacak kelime:", secretWord);
-    console.log("========================================");
 
     // ÖNEMLİ: Kelime zaten var, YENİ SEÇME!
     resetGame(true); // skipWordSelection = true
@@ -1874,8 +1820,6 @@ async function startOnlineGame() {
     await updateOpponentInfo();
   } else {
     // Katılan oyuncu Firebase'den güncel verileri bir kez daha okuyor
-    console.log("========================================");
-    console.log("OYUNCU 2 - FIREBASE'DEN VERİ OKUNUYOR");
 
     try {
       const snapshot = await currentRoomRef.once('value');
@@ -1885,20 +1829,15 @@ async function startOnlineGame() {
         currentTurn = roomData.currentTurn;
         lockedPositions = roomData.lockedPositions || [false, false, false, false, false];
 
-        console.log("Firebase'den alınan kelime:", secretWord);
-        console.log("Başlangıç sırası:", currentTurn);
       }
     } catch (error) {
       console.error("Veri okuma hatası:", error);
     }
 
-    console.log("Board oluşturulmadan önce kelime:", secretWord);
-    console.log("========================================");
 
     // Board'u oluştur (kelime zaten Firebase'den alındı)
     resetGame(true); // skipWordSelection = true
 
-    console.log("Board oluşturulduktan SONRA kelime:", secretWord);
 
     // Oyuncu bilgilerini göster
     await updateOpponentInfo();
@@ -1956,7 +1895,6 @@ function applyOpponentGuess(guessData) {
       currentRow1 = guessData.currentRow;
     }
 
-    console.log("Rakibin tahmini board'a uygulandı - Row:", rowIndex, "Guess:", guessData.guess);
   }
 }
 
@@ -2007,7 +1945,6 @@ async function handleOnlineGameEnd(winnerPlayer) {
 
     // Altın kazan (online modda ben kazandıysam)
     if (currentUser) {
-      console.log("Online oyun kazanıldı - Altın ekleniyor: +10");
       await addCoins(10);
       await updateUserStats(true);
     }
@@ -2162,7 +2099,6 @@ async function updateUserStats(won) {
       gamesWon: won ? (userData.gamesWon || 0) + 1 : (userData.gamesWon || 0)
     });
 
-    console.log('İstatistikler güncellendi');
   } catch (error) {
     console.error('İstatistik güncelleme hatası:', error);
   }
@@ -2348,25 +2284,6 @@ async function handleTileSelection(row, col) {
   }
 }
 
-// Second Chance Power-up
-if (secondChanceBtn) {
-  secondChanceBtn.addEventListener("click", async () => {
-    if (!currentUser || gameOver) return;
-    if (userCoins < 20) { await showAlert("Yeterli altınınız yok! (20)"); return; }
-    if (isSecondChanceActive) { await showAlert("Zaten aktif!"); return; }
-    const checkTurn = isLocalMode || (isOnlineMode && currentTurn === ("player" + myPlayerNumber));
-    if (!checkTurn) { await showAlert("Sıra sizde değil!"); return; }
-
-    await showConfirm("İkinci Şans: Sıradaki tahminin yanlışsa sayılmayacak. Emin misin? (20 Altın)").then(async (res) => {
-      if (res) {
-        await addCoins(-20);
-        isSecondChanceActive = true;
-        secondChanceBtn.classList.add("active"); // Need CSS for active state
-        showAlert("🛡️ İkinci Şans Aktif! Yanlış tahmin yapmaktan korkma.");
-      }
-    });
-  });
-}
 
 
 // Fog Power-up
@@ -2403,19 +2320,41 @@ if (fogBtn) {
 
 // Pas Geç butonu kaldırıldı
 
+// ======================
+// TAB SWITCHING LOGIC
+// ======================
+function switchTab(target) {
+  if (!isOnlineMode) return;
+
+  if (target === "player1") {
+    tabPlayer1.classList.add("active");
+    tabPlayer2.classList.remove("active");
+    player1Section.style.display = "flex";
+    player2Section.style.display = "none";
+  } else {
+    tabPlayer1.classList.remove("active");
+    tabPlayer2.classList.add("active");
+    player1Section.style.display = "none";
+    player2Section.style.display = "flex";
+  }
+}
+
+if (tabPlayer1) {
+  tabPlayer1.addEventListener("click", () => switchTab("player1"));
+}
+if (tabPlayer2) {
+  tabPlayer2.addEventListener("click", () => switchTab("player2"));
+}
+
+
 // Yeni Oyun butonu (oyun bittiğinde)
 newGameButton.addEventListener("click", async () => {
   if (isOnlineMode && myPlayerNumber === 1) {
     // Oda sahibi yeni oyun başlatır
-    console.log("========================================");
-    console.log("YENİ OYUN BAŞLATILIYOR");
-    console.log("Eski kelime:", secretWord);
 
     // Yeni kelime seç
     resetGame(false, true); // forceNewWord = true
 
-    console.log("Yeni kelime:", secretWord);
-    console.log("========================================");
 
     // Firebase'e yeni oyun verilerini gönder
     if (currentRoomRef) {
@@ -2434,7 +2373,6 @@ newGameButton.addEventListener("click", async () => {
           'player1/lastGuess': null,
           'player2/lastGuess': null
         });
-        console.log("Firebase güncellendi - Yeni kelime:", secretWord);
       } catch (error) {
         console.error("Reset gönderme hatası:", error);
       }
@@ -2516,3 +2454,12 @@ function showFloatingEmoji(emoji, playerKey) {
 initGame();
 
 
+
+// PWA Service Worker Registration
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('Service Worker registered!', reg))
+      .catch(err => console.log('Service Worker registration failed: ', err));
+  });
+}

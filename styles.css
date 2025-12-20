@@ -281,41 +281,19 @@ h1 {
   box-shadow: 0 0 15px rgba(76, 175, 80, 0.3);
 }
 
-.player-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-  padding: 8px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 8px;
-}
-
-.player-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 2px solid #4caf50;
-  object-fit: cover;
-}
-
-.player-name-container {
+/* Player sections no longer have headers */
+.player-section {
   flex: 1;
+  min-width: 300px;
+  max-width: 380px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-}
-
-.player-title {
-  margin: 0;
-  font-size: 16px;
-  color: #fff;
-  font-weight: 600;
-}
-
-.player-subtitle {
-  font-size: 12px;
-  color: #aaa;
+  align-items: center;
+  padding: 16px;
+  background: #1a1a1a;
+  border-radius: 12px;
+  border: 2px solid #333;
+  transition: all 0.3s ease;
 }
 
 .board {
@@ -658,48 +636,95 @@ h1 {
   font-weight: 600;
 }
 
-.pass-button {
-  padding: 12px 24px;
-  font-size: 15px;
-  border-radius: 8px;
-  border: none;
-  background: #ff9800;
-  color: #fff;
-  cursor: pointer;
-  font-weight: 600;
-  transition: background 0.3s ease;
+/* Tabs as Headers System */
+.tabs-container {
+  display: flex;
+  width: 100%;
+  max-width: 800px;
+  gap: 10px;
+  margin: 0 auto 20px;
 }
 
-.pass-button:hover {
-  background: #f57c00;
-}
-
-.pass-button:active {
-  transform: scale(0.98);
-}
-
-.timer-display {
-  background: #333;
-  color: #ffb74d;
-  padding: 10px 20px;
-  border-radius: 8px;
-  border: 2px solid #555;
-  font-family: 'Courier New', monospace;
-  font-weight: bold;
-  font-size: 18px;
+.tab-btn {
+  flex: 1;
+  min-width: 0;
+  /* Allow shrinking */
   display: flex;
   align-items: center;
-  justify-content: center;
-  min-width: 120px;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #1a1a1a;
+  border: 2px solid #333;
+  border-radius: 12px;
+  color: #aaa;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
-.timer-warning {
+.tab-btn.active {
+  background: #222;
+  border-color: #4caf50;
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.2);
+}
+
+.tab-avatar-wrap {
+  position: relative;
+  width: 40px;
+  height: 40px;
+}
+
+.tab-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid #4caf50;
+  object-fit: cover;
+}
+
+.tab-timer {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background: #333;
+  color: #ffb74d;
+  font-size: 10px;
+  font-weight: bold;
+  padding: 2px 4px;
+  border-radius: 4px;
+  border: 1px solid #444;
+  font-family: monospace;
+}
+
+.tab-timer.warning {
   color: #ff5252;
   border-color: #ff5252;
-  animation: pulse 1s infinite;
 }
 
-/* Power-ups */
+.tab-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.tab-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tab-subtitle {
+  font-size: 11px;
+  color: #777;
+}
+
+.tab-btn.active .tab-subtitle {
+  color: #4caf50;
+}
+
+/* Power-ups Minimal Style */
 #powerups-container {
   width: 100%;
   max-width: 800px;
@@ -707,62 +732,53 @@ h1 {
 }
 
 .powerups-box {
-  background: #1a1a1a;
-  border: 2px solid #333;
-  border-radius: 12px;
-  padding: 16px;
+  background: transparent;
+  padding: 0;
 }
 
 .powerups-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  display: flex;
+  justify-content: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .powerup-btn {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 16px 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: 2px solid #764ba2;
-  border-radius: 10px;
-  color: #fff;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 20px;
+  color: #eee;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   font-family: inherit;
 }
 
-.powerup-btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 20px rgba(118, 75, 162, 0.4);
-  border-color: #9b7bc4;
-}
-
-.powerup-btn:active {
-  transform: translateY(-1px);
+.powerup-btn:hover:not(:disabled) {
+  background: #222;
+  border-color: #4caf50;
+  transform: translateY(-2px);
 }
 
 .powerup-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.3;
   cursor: not-allowed;
-  transform: none;
-}
-
-.powerup-icon {
-  font-size: 28px;
 }
 
 .powerup-name {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .powerup-cost {
-  font-size: 13px;
-  color: #ffd700;
+  font-size: 12px;
+  color: #ffb74d;
   font-weight: 700;
+  padding-left: 4px;
+  border-left: 1px solid #333;
 }
 
 #opponentName {
@@ -799,22 +815,6 @@ h1 {
   background: #ff1744;
 }
 
-/* Responsive design */
-@media (max-width: 768px) {
-  #game-container {
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .player-section {
-    max-width: 100%;
-  }
-
-  .status-bar {
-    flex-direction: column;
-    gap: 8px;
-  }
-}
 
 /* Custom Modal Styles */
 .modal-overlay {
@@ -920,100 +920,21 @@ h1 {
 
 /* Mobile Redesign - Sticky Bottom Bar */
 #bottom-bar {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   width: 100%;
   max-width: 800px;
+  margin-top: 20px;
 }
 
-@media (max-width: 768px) {
-  body {
-    padding-bottom: 220px;
-    /* Space for sticky footer */
-  }
-
-  #bottom-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    max-width: 100%;
-    background: rgba(18, 18, 18, 0.95);
-    backdrop-filter: blur(10px);
-    border-top: 1px solid #333;
-    padding: 12px 16px;
-    z-index: 1000;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
-  }
-
-  #powerups-container {
-    margin-bottom: 0;
-  }
-
-  .powerups-box {
-    padding: 10px;
-    background: transparent;
-    border: none;
-  }
-
-  .powerups-grid {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-    justify-content: center;
-  }
-
-  .powerup-btn {
-    flex: 1;
-    min-width: 100px;
-    padding: 8px;
-    flex-direction: row;
-    justify-content: center;
-  }
-
-  .powerup-icon {
-    font-size: 20px;
-  }
-
-  .powerup-name {
-    display: none;
-    /* Hide text on small screens */
-  }
-
-  #controls {
-    flex-wrap: wrap;
-    justify-content: stretch;
-  }
-
-  #controls button {
-    flex: 1;
-    white-space: nowrap;
-    padding: 14px;
-    /* Larger touch target */
-  }
-
-  .guess-button {
-    height: 50px;
-    font-size: 18px;
-    font-weight: bold;
-    background: #4caf50;
-    position: sticky;
-    bottom: 8px;
-  }
-
-  .board {
-    margin-bottom: 20px;
-    max-width: 100%;
-  }
-
-  .tile {
-    font-size: 24px;
-    font-weight: bold;
-  }
+/* Hide headers when game is active */
+body:has(#game-screen[style*="display: block"]) h1,
+body:has(#game-screen[style*="display: block"]) .subtitle,
+body:has(#game-screen[style*="display: block"]) #connection-status {
+  display: none !important;
 }
+
 
 /* Player Timer */
 .player-timer {
@@ -1129,11 +1050,6 @@ h1 {
 
 .fogged {
   background-color: #555 !important;
-  color: #555 !important;
-  /* Hide letter? User said "not see any yellow letters". */
-  /* If I set color to transparent, they don't see the letter. */
-  /* If I set color to #eee (text), they see letter but background is gray. */
-  /* Let's try: Neutral background, Visible Text. */
   color: #fff !important;
   border-color: #777 !important;
 }
@@ -1146,29 +1062,103 @@ h1 {
   border-color: #444 !important;
 }
 
-/* Second Chance Pulse */
-@keyframes shield-pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.4);
-  }
-
-  70% {
-    box-shadow: 0 0 0 10px rgba(255, 152, 0, 0);
-  }
-
-  100% {
-    box-shadow: 0 0 0 0 rgba(255, 152, 0, 0);
-  }
-}
-
-#secondChanceBtn.active {
-  background-color: #ff9800 !important;
-  animation: shield-pulse 2s infinite;
-}
+/* Second Chance Pulse (Removed) */
 
 @media (max-width: 768px) {
-  .emoji-bar {
-    justify-content: start;
-    /* Allow scrolling from start */
+
+  /* Global Layout */
+  body {
+    padding: 8px;
+    padding-bottom: 20px;
+    overflow-x: hidden;
+  }
+
+  h1 {
+    font-size: 18px;
+  }
+
+  /* Containers */
+  #game-container {
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    align-items: center;
+  }
+
+  .player-section {
+    width: fit-content;
+    max-width: min(95vw, 360px);
+    padding: 12px 8px;
+    border-width: 1px;
+    margin: 0 auto;
+  }
+
+  /* Game Board & Scaling */
+  .board {
+    margin: 0 auto 8px;
+    max-width: min(90vw, 320px);
+    gap: 3px;
+  }
+
+  .tile {
+    font-size: 18px;
+  }
+
+  /* Tabs as Headers on Mobile */
+  .tabs-container {
+    max-width: min(90vw, 320px);
+    margin: 0 auto 12px;
+    gap: 6px;
+  }
+
+  .tab-btn {
+    padding: 4px 6px;
+    gap: 4px;
+    border-radius: 10px;
+  }
+
+  .tab-avatar-wrap {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+  }
+
+  .tab-title {
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60px;
+  }
+
+  .tab-subtitle {
+    display: none;
+  }
+
+  .tab-info {
+    min-width: 0;
+  }
+
+  /* Bottom Bar & Controls */
+  #bottom-bar {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  #controls {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .powerups-grid {
+    gap: 8px;
+    justify-content: center;
+  }
+
+  .powerup-btn {
+    padding: 6px 12px;
+    font-size: 11px;
   }
 }

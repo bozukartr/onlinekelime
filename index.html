@@ -3,16 +3,26 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Türkçe Wordl</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Türkçe Kelime Bulmacası - Online Wordle</title>
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+  <!-- PWA & Mobile Meta Tags -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1a1a1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Kelime">
+  <link rel="apple-touch-icon" href="icon-512.png">
+  <link rel="icon" type="image/png" href="icon-512.png">
+
   <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
-  <h1>Türkçe Wordl - Online İki Oyunculu</h1>
+  <h1>Türkçe Wordl</h1>
   <div class="subtitle">
-    5 harfli kelimeyi 6 tahminde bul. Yeşil harfler her iki tarafta da sabitlenir. <br>
-    Kelimeyi ilk bulan kazanır!
+    Kelime dağarcığına güveniyor musun?
   </div>
 
   <!-- Kullanıcı Profili -->
@@ -129,16 +139,31 @@
       <span id="opponentName">Rakip: Bekleniyor...</span>
     </div>
 
+    <div id="game-tabs" class="tabs-container" style="display: none;">
+      <button id="tabPlayer1" class="tab-btn active">
+        <div class="tab-avatar-wrap">
+          <img id="player1Avatar" class="tab-avatar" src="" alt="" style="display: none;">
+          <span id="timer1" class="tab-timer"></span>
+        </div>
+        <div class="tab-info">
+          <span id="player1Title" class="tab-title">Sen</span>
+          <span id="player1Subtitle" class="tab-subtitle"></span>
+        </div>
+      </button>
+      <button id="tabPlayer2" class="tab-btn">
+        <div class="tab-avatar-wrap">
+          <img id="player2Avatar" class="tab-avatar" src="" alt="" style="display: none;">
+          <span id="timer2" class="tab-timer"></span>
+        </div>
+        <div class="tab-info">
+          <span id="player2Title" class="tab-title">Rakip</span>
+          <span id="player2Subtitle" class="tab-subtitle"></span>
+        </div>
+      </button>
+    </div>
+
     <div id="game-container">
       <div class="player-section" id="player1Section">
-        <div class="player-header">
-          <img id="player1Avatar" class="player-avatar" src="" alt="" style="display: none;">
-          <div class="player-name-container">
-            <h2 class="player-title" id="player1Title">Sen</h2>
-            <span class="player-subtitle" id="player1Subtitle"></span>
-          </div>
-          <span id="timer1" class="player-timer"></span>
-        </div>
 
         <div id="board1" class="board"></div>
         <button id="guessButton1" class="guess-button">Tahmini Kontrol Et</button>
@@ -146,14 +171,6 @@
       </div>
 
       <div class="player-section" id="player2Section">
-        <div class="player-header">
-          <img id="player2Avatar" class="player-avatar" src="" alt="" style="display: none;">
-          <div class="player-name-container">
-            <h2 class="player-title" id="player2Title">Rakip</h2>
-            <span class="player-subtitle" id="player2Subtitle"></span>
-          </div>
-          <span id="timer2" class="player-timer"></span>
-        </div>
 
         <div id="board2" class="board"></div>
         <button id="guessButton2" class="guess-button">Tahmini Kontrol Et</button>
@@ -168,24 +185,16 @@
           <h3 style="margin: 0 0 12px; font-size: 16px; color: #fff; text-align: center;">⚡ Güçlendirmeler</h3>
           <div class="powerups-grid">
             <button id="revealLetterBtn" class="powerup-btn">
-              <span class="powerup-icon">💡</span>
-              <span class="powerup-name">Rastgele Harf</span>
-              <span class="powerup-cost">💰 10</span>
+              <span class="powerup-name">İpucu</span>
+              <span class="powerup-cost">10 💰</span>
             </button>
             <button id="revealTileBtn" class="powerup-btn">
-              <span class="powerup-icon">👆</span>
               <span class="powerup-name">Harf Seç</span>
-              <span class="powerup-cost">💰 20</span>
-            </button>
-            <button id="secondChanceBtn" class="powerup-btn">
-              <span class="powerup-icon">🛡️</span>
-              <span class="powerup-name">İkinci Şans</span>
-              <span class="powerup-cost">💰 20</span>
+              <span class="powerup-cost">20 💰</span>
             </button>
             <button id="fogBtn" class="powerup-btn">
-              <span class="powerup-icon">🌫️</span>
-              <span class="powerup-name">Sis</span>
-              <span class="powerup-cost">💰 20</span>
+              <span class="powerup-name">Sis Bombası</span>
+              <span class="powerup-cost">20 💰</span>
             </button>
           </div>
 
@@ -231,8 +240,6 @@
     </div>
 
 
-    <div id="hint">Her oyuncu kendi tahmin alanında kelimeyi bulmaya çalışır. <b>Enter</b> veya butona basarak tahmin
-      edin.</div>
   </div>
 
   <!-- Firebase CDN -->
