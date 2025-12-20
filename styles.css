@@ -1066,21 +1066,34 @@ body:has(#game-screen[style*="display: block"]) #connection-status {
 
 @media (max-width: 768px) {
 
-  /* Global Layout */
+  /* Global Layout - Strict App-Like */
   html,
   body {
-    overflow-x: hidden;
+    overflow: hidden;
     width: 100%;
-    position: relative;
+    height: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    margin: 0;
+    padding: 0;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    /* Disable horizontal panning */
   }
 
   body {
+    display: flex;
+    flex-direction: column;
     padding: 8px;
-    padding-bottom: 20px;
+    align-items: center;
   }
 
-  h1 {
-    font-size: 18px;
+  /* Hide headers in-game to save space and prevent shifts */
+  h1,
+  .subtitle {
+    display: none !important;
   }
 
   /* Containers */
