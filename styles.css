@@ -314,12 +314,18 @@ h1 {
 .tile {
   width: 100%;
   aspect-ratio: 1 / 1;
-  font-size: 20px;
+  font-size: 24px;
+  font-weight: bold;
   text-align: center;
-  border-radius: 6px;
-  border: 1px solid #444;
-  background: #222;
-  color: #eee;
+  border-radius: 8px;
+  border: 2px solid #333;
+  background: #1a1a1a;
+  color: #fff;
+  transition: all 0.2s ease;
+  -webkit-appearance: none;
+  appearance: none;
+  caret-color: transparent;
+  text-transform: uppercase;
 }
 
 .tile:disabled {
@@ -1128,11 +1134,16 @@ body:has(#game-screen[style*="display: block"]) #connection-status {
   }
 
   .tile {
-    font-size: 18px;
-    width: calc((100% - 16px) / 5) !important;
-    /* 4 gaps of 4px = 16px */
-    padding: 0;
-    /* Remove padding to keep caret centered and avoid shifts */
+    font-size: 20px;
+    width: 100% !important;
+    max-width: 50px;
+    margin: 0 auto;
+    border-radius: 6px;
+    border-width: 2px;
+  }
+
+  .row {
+    gap: 4px !important;
   }
 
   .tile:focus {

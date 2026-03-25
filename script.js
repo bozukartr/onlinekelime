@@ -360,6 +360,9 @@ function createBoard(boardEl, gridInputs, guessButton) {
       input.className = "tile";
       input.autocomplete = "off";
       input.inputMode = "text";
+      input.setAttribute("autocorrect", "off");
+      input.setAttribute("autocapitalize", "none");
+      input.setAttribute("spellcheck", "false");
 
       // Yazarken bir sonraki UYGUN (kilitli olmayan) kutuya geç
       input.addEventListener("input", (e) => {
