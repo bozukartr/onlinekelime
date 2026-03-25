@@ -309,11 +309,13 @@ h1 {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 6px;
+  width: 100%;
 }
 
 .tile {
   width: 100%;
   aspect-ratio: 1 / 1;
+  min-width: 0;
   font-size: 24px;
   font-weight: bold;
   text-align: center;
@@ -326,6 +328,8 @@ h1 {
   appearance: none;
   caret-color: transparent;
   text-transform: uppercase;
+  margin: 0;
+  padding: 0;
 }
 
 .tile:disabled {
@@ -1136,13 +1140,12 @@ body:has(#game-screen[style*="display: block"]) #connection-status {
   .tile {
     font-size: 20px;
     width: 100% !important;
-    max-width: 50px;
-    margin: 0 auto;
     border-radius: 6px;
     border-width: 2px;
   }
 
   .row {
+    width: 100% !important;
     gap: 4px !important;
   }
 
