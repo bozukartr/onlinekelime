@@ -32,18 +32,21 @@ h1 {
 .profile-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: #1a1a1a;
-  border: 2px solid #333;
-  border-radius: 12px;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(26, 26, 26, 0.8);
+  border: 1px solid #333;
+  border-radius: 20px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
 .user-avatar {
-  width: 48px;
-  height: 48px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  border: 2px solid #4caf50;
+  border: 1.5px solid #4caf50;
+  object-fit: cover;
 }
 
 .user-info {
@@ -56,23 +59,24 @@ h1 {
 .user-info span:first-child {
   font-weight: 600;
   color: #fff;
-  font-size: 16px;
+  font-size: 13px;
 }
 
 .coins {
   color: #ffb74d;
   font-weight: 700;
-  font-size: 18px;
+  font-size: 14px;
 }
 
 .logout-btn {
-  padding: 8px 16px;
-  font-size: 13px;
-  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 15px;
   border: 1px solid #444;
-  background: transparent;
-  color: #aaa;
+  background: rgba(255,255,255,0.05);
+  color: #999;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
 .logout-btn:hover {
@@ -245,10 +249,10 @@ h1 {
 }
 
 .subtitle {
-  font-size: 13px;
-  margin-bottom: 16px;
+  font-size: 12px;
+  margin-bottom: 12px;
   text-align: center;
-  color: #aaa;
+  color: #777;
   max-width: 800px;
 }
 
@@ -313,9 +317,8 @@ h1 {
 }
 
 .tile {
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  min-width: 0;
+  width: 57px;
+  height: 57px;
   font-size: 24px;
   font-weight: bold;
   text-align: center;
@@ -443,35 +446,101 @@ h1 {
 }
 
 .message {
-  font-size: 14px;
-  text-align: center;
-  min-height: 40px;
-  max-width: 360px;
-  width: 100%;
-  line-height: 1.5;
+  display: none;
 }
 
-.message.win {
-  color: #4caf50;
-  font-weight: bold;
+.powerups-grid-mini {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.powerup-btn-mini {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #252525;
+  border: 1.5px solid #383838;
+  border-radius: 12px;
+  padding: 6px 4px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 48px;
+}
+
+.powerup-btn-mini span {
   font-size: 16px;
 }
 
-.message.lose {
-  color: #ff5252;
-  font-weight: bold;
+.powerup-btn-mini small {
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffb74d;
+  margin-top: 2px;
 }
 
-.message.neutral {
-  color: #aaa;
+.powerup-btn-mini:hover:not(:disabled) {
+  border-color: #4caf50;
+  background: #2a2a2a;
 }
 
-#hint {
-  font-size: 12px;
+.powerup-btn-mini:disabled {
+  opacity: 0.3;
+  filter: grayscale(1);
+  cursor: not-allowed;
+}
+
+/* Toast System */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+  width: 90%;
+  max-width: 380px;
+}
+
+#game-screen {
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 500px;
+}
+
+.toast {
+  background: rgba(40, 40, 40, 0.95);
+  border: 1px solid #4caf50;
+  backdrop-filter: blur(8px);
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 12px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+  font-size: 14px;
+  font-weight: 500;
   text-align: center;
-  color: #777;
-  margin-top: 4px;
-  max-width: 800px;
+  animation: toastIn 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+
+.toast.win { border-color: #4caf50; }
+.toast.info { border-color: #2196f3; }
+.toast.error { border-color: #f44336; }
+
+@keyframes toastIn {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 /* Connection Screen Styles */
@@ -779,16 +848,17 @@ h1 {
 
 .powerup-btn {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: #1a1a1a;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid #333;
   border-radius: 20px;
   color: #eee;
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: inherit;
+  transition: all 0.2s;
+  position: relative;
 }
 
 .powerup-btn:hover:not(:disabled) {
@@ -803,16 +873,17 @@ h1 {
 }
 
 .powerup-name {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 500;
+  color: #aaa;
 }
 
 .powerup-cost {
-  font-size: 12px;
+  font-size: 11px;
   color: #ffb74d;
   font-weight: 700;
-  padding-left: 4px;
-  border-left: 1px solid #333;
+  padding-left: 6px;
+  border-left: 1px solid #444;
 }
 
 #opponentName {
@@ -1133,9 +1204,10 @@ body:has(#game-screen[style*="display: block"]) #connection-status {
   /* Containers */
   #game-container {
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
     width: 100%;
     align-items: center;
+    justify-content: flex-start;
   }
 
   .player-section {
@@ -1154,16 +1226,17 @@ body:has(#game-screen[style*="display: block"]) #connection-status {
 
   /* Game Board & Scaling */
   .board {
-    margin: 0 auto 8px;
+    margin: 0 auto 4px;
     width: 100%;
-    max-width: 300px;
+    max-width: 310px;
     gap: 4px;
-    overflow-x: hidden;
+    overflow: hidden;
   }
 
   .tile {
-    font-size: 20px;
-    width: 100% !important;
+    font-size: 26px;
+    width: 57px !important;
+    height: 57px !important;
     border-radius: 6px;
     border-width: 2px;
   }
@@ -1181,9 +1254,9 @@ body:has(#game-screen[style*="display: block"]) #connection-status {
   /* Tabs as Headers on Mobile */
   .tabs-container {
     width: 100%;
-    max-width: 300px;
-    margin: 0 auto 12px;
-    gap: 6px;
+    max-width: 260px;
+    margin: 0 auto 8px;
+    gap: 4px;
   }
 
   .tab-btn {

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'online-kelime-v5'; // v5 - 2026-03-26 03:07
+const CACHE_NAME = 'online-kelime-v12'; // v12 - 2026-03-26 04:14
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -8,22 +8,22 @@ const ASSETS_TO_CACHE = [
     './icon-512.png'
 ];
 
-self.addEventListener('install', (event) => {
-    self.skipWaiting();
+self.addEventListener('install', event => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
+        caches.open(CACHE_NAME).then(cache => {
             return cache.addAll(ASSETS_TO_CACHE);
         })
     );
+    self.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
+self.addEventListener('activate', event => {
     event.waitUntil(
-        caches.keys().then((cacheNames) => {
+        caches.keys().then(cacheNames => {
             return Promise.all(
-                cacheNames.map((name) => {
-                    if (name !== CACHE_NAME) {
-                        return caches.delete(name);
+                cacheNames.map(cacheName => {
+                    if (cacheName !== CACHE_NAME) {
+                        return caches.delete(cacheName);
                     }
                 })
             );
@@ -32,9 +32,9 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
-self.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', event => {
     event.respondWith(
-        caches.match(event.request).then((response) => {
+        caches.match(event.request).then(response => {
             return response || fetch(event.request);
         })
     );

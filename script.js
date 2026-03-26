@@ -48,7 +48,6 @@ let currentRow1 = 0;
 let firstLetterHintGiven1 = false;
 const boardEl1 = document.getElementById("board1");
 const guessButton1 = document.getElementById("guessButton1");
-const messageEl1 = document.getElementById("message1");
 const gridInputs1 = []; // [row][col]
 
 // Oyuncu 2
@@ -56,7 +55,6 @@ let currentRow2 = 0;
 let firstLetterHintGiven2 = false;
 const boardEl2 = document.getElementById("board2");
 const guessButton2 = document.getElementById("guessButton2");
-const messageEl2 = document.getElementById("message2");
 const gridInputs2 = []; // [row][col]
 
 const resetButton = document.getElementById("resetButton");
@@ -102,7 +100,21 @@ let isSelectingTile = false;
 
 
 
-// Modal Helper Functions
+// Toast System
+function showToast(message, type = "info", duration = 3000) {
+  const container = document.getElementById("toastContainer");
+  if (!container) return;
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(-20px)";
+    toast.style.transition = "all 0.4s ease";
+    setTimeout(() => toast.remove(), 400);
+  }, duration);
+}
 
 const customModal = document.getElementById('customModal');
 const modalTitle = document.getElementById('modalTitle');
@@ -287,10 +299,7 @@ async function handleTurnTimeout() {
   }
 
   // Show message
-  if (messageEl) {
-    messageEl.textContent = "⏰ Süre doldu!";
-    messageEl.className = "message neutral";
-  }
+  showToast(currentTurn === "player1" ? "⏰ Süre doldu!" : "⏰ Rakibin süresi doldu!", "info");
 
   // Lock current row as failed
   if (gridInputs[currentRow]) {
@@ -305,6 +314,8 @@ async function handleTurnTimeout() {
       input.classList.add("reveal");
       setTimeout(() => {
         input.classList.add("absent");
+        // Animasyon bitince sınıfı temizle (tab geçişlerinde tekrarlamaması için)
+        setTimeout(() => input.classList.remove("reveal"), 600);
       }, 250 + (c * 100));
     }
   }
@@ -551,6 +562,8 @@ function colourRow(gridInputs, rowIndex, result) {
           input.classList.add("absent");
         }
       }
+      // Animasyon bitince sınıfı temizle
+      setTimeout(() => input.classList.remove("reveal"), 600);
     }, delay);
 
     input.disabled = true;
@@ -653,23 +666,9 @@ function updateBoardsForTurn() {
   // Sıra mesajlarını göster
   if (!gameOver) {
     if (isPlayer1Turn && currentRow1 < ROWS) {
-      if (messageEl1) {
-        messageEl1.textContent = "Senin sıran! ⏰";
-        messageEl1.className = "message neutral";
-      }
-      if (currentRow2 < ROWS && messageEl2) {
-        messageEl2.textContent = "Rakip oynuyor...";
-        messageEl2.className = "message neutral";
-      }
+      if (myPlayerNumber === 1) showToast("Sıra sende! ⏰", "info");
     } else if (isPlayer2Turn && currentRow2 < ROWS) {
-      if (messageEl2) {
-        messageEl2.textContent = "Senin sıran! ⏰";
-        messageEl2.className = "message neutral";
-      }
-      if (currentRow1 < ROWS && messageEl1) {
-        messageEl1.textContent = "Rakip oynuyor...";
-        messageEl1.className = "message neutral";
-      }
+      if (myPlayerNumber === 2) showToast("Sıra sende! ⏰", "info");
     }
 
     // Sıra olan oyuncunun aktif kutusuna odaklan
@@ -713,21 +712,18 @@ async function handleGuess(playerName, gridInputs, currentRow, messageEl, guessB
   const guess = getGuessFromRow(gridInputs, currentRow);
 
   if (guess.indexOf(" ") !== -1) {
-    messageEl.textContent = "Lütfen tüm 5 harfi doldur.";
-    messageEl.className = "message";
+    showToast("Lütfen tüm harfleri doldur.", "error");
     return;
   }
 
   if (guess.length !== COLS) {
-    messageEl.textContent = "Kelime 5 harf olmalı.";
-    messageEl.className = "message";
+    showToast("Kelime 5 harf olmalı.", "error");
     return;
   }
 
   // Kelime listesinde var mı kontrol et
   if (!isValidWord(guess)) {
-    messageEl.textContent = "Bu kelime listede yok!";
-    messageEl.className = "message";
+    showToast("Bu kelime listede yok!", "error");
     return;
   }
 
@@ -738,8 +734,7 @@ async function handleGuess(playerName, gridInputs, currentRow, messageEl, guessB
 
   if (guess === secretWord) {
     winner = playerName;
-    messageEl.textContent = "🎉 KAZANDIN! Kelime: " + secretWord;
-    messageEl.className = "message win";
+    showToast("🎉 TEBRİKLER! Kelimi buldun: " + secretWord, "win", 5000);
     gameOver = true;
     guessButton1.disabled = true;
     guessButton2.disabled = true;
@@ -748,10 +743,8 @@ async function handleGuess(playerName, gridInputs, currentRow, messageEl, guessB
     showNewGameButton();
 
     // Diğer oyuncuya kaybettiğini göster
-    const otherMessageEl = playerName === "player1" ? messageEl2 : messageEl1;
-    if (otherMessageEl) {
-      otherMessageEl.textContent = "😔 Kaybettin! Kelime: " + secretWord;
-      otherMessageEl.className = "message lose";
+    if (isOnlineMode) {
+        // Rakip zaten kendi SW listener'ı ile alacak
     }
 
     // Altın kazan (sadece ben kazandıysam)
@@ -778,13 +771,11 @@ async function handleGuess(playerName, gridInputs, currentRow, messageEl, guessB
 
   currentRow++;
   if (currentRow >= ROWS) {
-    messageEl.textContent = "Tahmin hakkın bitti. Kelime: " + secretWord;
-    messageEl.className = "message neutral";
+    showToast("Tahmin hakkın bitti. Kelime: " + secretWord, "info", 5000);
     guessButton.disabled = true;
 
     // Lokal modda veya tek oyuncuysa anlamı göster
     if (isLocalMode) {
-      showWordMeaning(secretWord, messageEl);
       showNewGameButton();
     }
 
@@ -793,16 +784,7 @@ async function handleGuess(playerName, gridInputs, currentRow, messageEl, guessB
       (playerName === "player2" && currentRow1 >= ROWS)) {
       gameOver = true;
       showNewGameButton();
-
-      if (messageEl1) {
-        messageEl1.textContent = "Berabere! Kelime: " + secretWord;
-        messageEl1.className = "message neutral";
-      }
-      if (messageEl2) {
-        messageEl2.textContent = "Berabere! Kelime: " + secretWord;
-        messageEl2.className = "message neutral";
-      }
-
+      showToast("Oyun bitti! Kelime: " + secretWord, "info");
     } else {
       // Sıra diğer oyuncuya geçer
       currentTurn = playerName === "player1" ? "player2" : "player1";
@@ -823,9 +805,6 @@ async function handleGuess(playerName, gridInputs, currentRow, messageEl, guessB
     updateBoardsForTurn();
     return;
   }
-
-  messageEl.textContent = "";
-  messageEl.className = "message";
 
   // Aktif satırı güncelle
   if (playerName === "player1") {
@@ -859,15 +838,8 @@ function resetGame(skipWordSelection = false, forceNewWord = false) {
   isFogActive = false;
   isFogged = false;
 
-  // Clear messages
-  if (messageEl1) { messageEl1.textContent = ""; messageEl1.className = "message"; }
-  if (messageEl2) { messageEl2.textContent = ""; messageEl2.className = "message"; }
-
-  // Re-enable buttons if they exist
-  if (revealLetterBtn) revealLetterBtn.disabled = false;
-  if (revealTileBtn) revealTileBtn.disabled = false;
-  if (fogBtn) fogBtn.disabled = false;
-
+  // Powerup butonlarını güncelle
+  updatePowerupButtons();
 
   // Kelime seçimi
   if (forceNewWord) {
@@ -891,7 +863,6 @@ function resetGame(skipWordSelection = false, forceNewWord = false) {
       if (!secretWord || secretWord === "HATA!") {
         secretWord = pickRandomWord();
         currentTurn = Math.random() < 0.5 ? "player1" : "player2";
-      } else {
       }
     }
   }
@@ -908,15 +879,6 @@ function resetGame(skipWordSelection = false, forceNewWord = false) {
   firstLetterHintGiven2 = false;
 
   stopTimer(); // Stop any existing timer
-
-  if (messageEl1) {
-    messageEl1.textContent = "";
-    messageEl1.className = "message";
-  }
-  if (messageEl2) {
-    messageEl2.textContent = "";
-    messageEl2.className = "message";
-  }
 
   if (guessButton1) guessButton1.disabled = false;
   if (guessButton2) guessButton2.disabled = false;
@@ -1114,18 +1076,17 @@ function updateCoinsDisplay() {
 
 // Power-up butonlarını güncelle (yeterli altın var mı?)
 function updatePowerupButtons() {
-  if (!currentUser) {
-    if (revealLetterBtn) revealLetterBtn.disabled = true;
-    if (revealWordBtn) revealWordBtn.disabled = true;
-    return;
-  }
+  const revealBtns = document.querySelectorAll('[id^="revealLetterBtn"]');
+  const tileBtns = document.querySelectorAll('[id^="revealTileBtn"]');
+  const fogBtns = document.querySelectorAll('[id^="fogBtn"]');
 
-  if (revealLetterBtn) {
-    revealLetterBtn.disabled = userCoins < 10 || gameOver;
-  }
-  if (revealTileBtn) {
-    revealTileBtn.disabled = userCoins < 20 || gameOver;
-  }
+  const canAffordLetter = userCoins >= 10 && !gameOver;
+  const canAffordTile = userCoins >= 20 && !gameOver;
+  const canAffordFog = userCoins >= 20 && !gameOver && isOnlineMode;
+
+  revealBtns.forEach(btn => btn.disabled = !canAffordLetter || !currentUser);
+  tileBtns.forEach(btn => btn.disabled = !canAffordTile || !currentUser);
+  fogBtns.forEach(btn => btn.disabled = !canAffordFog || !currentUser);
 }
 
 
@@ -1561,22 +1522,6 @@ function listenToGameUpdates() {
     }
   });
 
-  // Kelime anlamını dinle (online modda paylaşımlı)
-  currentRoomRef.child('wordMeaning').on('value', (snapshot) => {
-    const meaning = snapshot.val();
-    if (meaning && gameOver) {
-      // Anlam Firebase'e yazıldı, her iki oyuncuya da göster
-
-      if (messageEl1 && messageEl1.textContent.includes(secretWord)) {
-        const currentMsg = messageEl1.textContent.replace('Anlam yükleniyor...', '').replace(/\n\n📖 .*/s, '');
-        messageEl1.textContent = currentMsg + '\n\n📖 ' + meaning;
-      }
-      if (messageEl2 && messageEl2.textContent.includes(secretWord)) {
-        const currentMsg = messageEl2.textContent.replace('Anlam yükleniyor...', '').replace(/\n\n📖 .*/s, '');
-        messageEl2.textContent = currentMsg + '\n\n📖 ' + meaning;
-      }
-    }
-  });
 
   // Reset dinle (oyuncu 2 için)
   if (myPlayerNumber === 2) {
@@ -1943,45 +1888,20 @@ async function handleOnlineGameEnd(winnerPlayer) {
   // Yeni Oyun butonunu göster
   showNewGameButton();
 
-  if ((winnerPlayer === "player1" && myPlayerNumber === 1) || (winnerPlayer === "player2" && myPlayerNumber === 2)) {
-    // Ben kazandım
-    const myMessageEl = myPlayerNumber === 1 ? messageEl1 : messageEl2;
-    const otherMessageEl = myPlayerNumber === 1 ? messageEl2 : messageEl1;
-    if (myMessageEl) {
-      myMessageEl.textContent = "🎉 KAZANDIN! Kelime: " + secretWord;
-      myMessageEl.className = "message win";
-    }
-    if (otherMessageEl) {
-      otherMessageEl.textContent = "😔 Kaybettin! Kelime: " + secretWord;
-      otherMessageEl.className = "message lose";
-    }
+  const isMyWin = (winnerPlayer === "player1" && myPlayerNumber === 1) || (winnerPlayer === "player2" && myPlayerNumber === 2);
 
-    // Altın kazan (online modda ben kazandıysam)
+  if (isMyWin) {
+    showToast("🎉 TEBRİKLER! Oyunu sen kazandın! Kelime: " + secretWord, "win", 5000);
     if (currentUser) {
-      await addCoins(10);
+      await addCoins(50);
       await updateUserStats(true);
     }
   } else {
-    // Rakip kazandı
-    const myMessageEl = myPlayerNumber === 1 ? messageEl1 : messageEl2;
-    const otherMessageEl = myPlayerNumber === 1 ? messageEl2 : messageEl1;
-    if (myMessageEl) {
-      myMessageEl.textContent = "😔 Kaybettin! Kelime: " + secretWord;
-      myMessageEl.className = "message lose";
-    }
-    if (otherMessageEl) {
-      otherMessageEl.textContent = "🎉 KAZANDI! Kelime: " + secretWord;
-      otherMessageEl.className = "message win";
-    }
-
-    // Kaybettim, istatistik güncelle (altın yok)
+    showToast("😔 Kaybettin! Rakip kelimeyi buldu: " + secretWord, "error", 5000);
     if (currentUser) {
       await updateUserStats(false);
     }
   }
-
-  // Anlamı paylaşımlı şekilde göster (sadece bir Gemini isteği)
-  // Anlamı paylaşımlı şekilde göster (Kaldirildi)
 }
 
 // Rakibin tahminini tahtaya uygula
@@ -2084,17 +2004,17 @@ function updateScreensBasedOnAuth() {
 guessButton1.addEventListener("click", () => {
   if (isLocalMode) {
     // Lokal modda tek oyuncu
-    handleGuess("player1", gridInputs1, currentRow1, messageEl1, guessButton1, gridInputs2, currentRow2);
+    handleGuess("player1", gridInputs1, currentRow1, null, guessButton1, gridInputs2, currentRow2);
   } else if (isOnlineMode && myPlayerNumber === 1) {
     // Online modda sadece kendi oyuncum
-    handleGuess("player1", gridInputs1, currentRow1, messageEl1, guessButton1, gridInputs2, currentRow2);
+    handleGuess("player1", gridInputs1, currentRow1, null, guessButton1, gridInputs2, currentRow2);
   }
 });
 
 guessButton2.addEventListener("click", () => {
   // Lokal modda buton2 kullanılmıyor
   if (isOnlineMode && myPlayerNumber === 2) {
-    handleGuess("player2", gridInputs2, currentRow2, messageEl2, guessButton2, gridInputs1, currentRow1);
+    handleGuess("player2", gridInputs2, currentRow2, null, guessButton2, gridInputs1, currentRow1);
   }
 });
 
@@ -2117,213 +2037,79 @@ async function updateUserStats(won) {
   }
 }
 
-// Power-up: Rastgele Harf Göster (10 altın)
-revealLetterBtn.addEventListener("click", async () => {
-  if (!currentUser) {
-    await showAlert("Bu özelliği kullanmak için giriş yapmalısınız!");
-    return;
-  }
+// Power-up event listeners
+function initPowerupListeners() {
+    document.querySelectorAll('[id^="revealLetterBtn"]').forEach(btn => {
+        btn.addEventListener("click", () => useRevealLetter());
+    });
+    document.querySelectorAll('[id^="revealTileBtn"]').forEach(btn => {
+        btn.addEventListener("click", () => useRevealTile());
+    });
+    document.querySelectorAll('[id^="fogBtn"]').forEach(btn => {
+        btn.addEventListener("click", () => useFogBomb());
+    });
+}
 
-  if (gameOver) {
-    await showAlert("Oyun bitti!");
-    return;
-  }
+async function useRevealLetter() {
+  if (!currentUser) { showToast("Giriş yapmalısın!", "error"); return; }
+  if (gameOver) return;
+  if (userCoins < 10) { showToast("Yetersiz altın!", "error"); return; }
 
+  const myGridInputs = (myPlayerNumber === 2) ? gridInputs2 : gridInputs1;
+  const myCurrentRow = (myPlayerNumber === 2) ? currentRow2 : currentRow1;
 
-  if (isSelectingTile) {
-    isSelectingTile = false;
-    if (messageEl1) messageEl1.textContent = "";
-    if (messageEl2) messageEl2.textContent = "";
-    return;
-  }
-
-  if (userCoins < 10) {
-    await showAlert("Yeterli altınınız yok! Gereken: 10 💰");
-    return;
-  }
-
-  // Lokal modda veya kendi sıramda
-
-  const myGridInputs = isLocalMode ? gridInputs1 : (myPlayerNumber === 1 ? gridInputs1 : gridInputs2);
-  const myCurrentRow = isLocalMode ? currentRow1 : (myPlayerNumber === 1 ? currentRow1 : currentRow2);
-
-  if (myCurrentRow >= ROWS) {
-    await showAlert("Tahmin hakkınız kalmadı!");
-    return;
-  }
-
-  // Henüz bulunmamış bir harfi göster
+  if (myCurrentRow >= ROWS) return;
 
   const unlockedIndices = [];
   for (let i = 0; i < COLS; i++) {
-    if (!lockedPositions[i]) {
-      unlockedIndices.push(i);
-    }
+    if (!lockedPositions[i]) unlockedIndices.push(i);
   }
 
-  if (unlockedIndices.length === 0) {
-    await showAlert("Tüm harfler zaten bulunmuş!");
-    return;
-  }
-
-
-  // Rastgele bir harf seç
+  if (unlockedIndices.length === 0) { showToast("Zaten tüm harfler açık!", "info"); return; }
 
   const randomIndex = unlockedIndices[Math.floor(Math.random() * unlockedIndices.length)];
   const revealedLetter = secretWord[randomIndex];
 
-  // Harfi göster
   if (myGridInputs[myCurrentRow] && myGridInputs[myCurrentRow][randomIndex]) {
     myGridInputs[myCurrentRow][randomIndex].value = revealedLetter;
     myGridInputs[myCurrentRow][randomIndex].classList.add("correct", "locked");
     myGridInputs[myCurrentRow][randomIndex].disabled = true;
-
-    // Pozisyonu kilitle
     lockedPositions[randomIndex] = true;
 
-    // Online modda Firebase'e güncelle
     if (isOnlineMode && currentRoomRef) {
-      await currentRoomRef.update({
-        lockedPositions: lockedPositions
-      });
+      await currentRoomRef.update({ lockedPositions: lockedPositions });
     }
-  }
-
-  // Altın düş
-  await addCoins(-10);
-
-  await showAlert(`💡 Harf gösterildi: ${revealedLetter} (${randomIndex + 1}. pozisyon)`);
-});
-
-// Power-up: Harf Seç (20 altın)
-revealTileBtn.addEventListener("click", async () => {
-  if (!currentUser) {
-    await showAlert("Bu özelliği kullanmak için giriş yapmalısınız!");
-    return;
-  }
-
-  if (gameOver) {
-    await showAlert("Oyun bitti!");
-    return;
-  }
-
-  if (userCoins < 20) {
-    await showAlert("Yeterli altınınız yok! Gereken: 20 💰");
-    return;
-  }
-
-
-  const isMyTurn = isLocalMode || (isOnlineMode && currentTurn === ("player" + myPlayerNumber));
-  if (!isMyTurn) {
-    await showAlert("Sıra sizde değilken harf seçemezsiniz!");
-    return;
-  }
-
-
-  isSelectingTile = !isSelectingTile;
-
-
-  const myMessageEl = isLocalMode ? messageEl1 : (myPlayerNumber === 1 ? messageEl1 : messageEl2);
-
-  if (isSelectingTile) {
-    await showAlert("Şimdi harfini görmek istediğin kutucuğa tıkla!");
-    if (myMessageEl) {
-
-      myMessageEl.textContent = "👆 Kutucuğa tıkla!";
-      myMessageEl.classList.add("pulse");
-    }
-  } else {
-    if (myMessageEl) {
-      myMessageEl.textContent = "";
-      myMessageEl.classList.remove("pulse");
-    }
-  }
-});
-
-// Tile Selection Logic
-async function handleTileSelection(row, col) {
-  if (!isSelectingTile) return;
-
-  const myCurrentRow = isLocalMode ? currentRow1 : (myPlayerNumber === 1 ? currentRow1 : currentRow2);
-  const myGridInputs = isLocalMode ? gridInputs1 : (myPlayerNumber === 1 ? gridInputs1 : gridInputs2);
-
-  // Sadece aktif satırdaki kutucuklara tıklanabilir
-  if (row !== myCurrentRow) {
-    await showAlert("Sadece aktif satırdaki (şu anki tahmin sırası) kutucukları seçebilirsiniz!");
-    return;
-  }
-
-
-  if (lockedPositions[col]) {
-    await showAlert("Bu harf zaten bulunmuş!");
-    isSelectingTile = false;
-    return;
-  }
-
-
-  if (userCoins < 20) {
-    await showAlert("Yeterli altınınız yok!");
-    isSelectingTile = false;
-    return;
-  }
-
-
-  // Reveal Logic similar to random but specific col
-  const revealedLetter = secretWord[col];
-
-  if (myGridInputs[myCurrentRow] && myGridInputs[myCurrentRow][col]) {
-    myGridInputs[myCurrentRow][col].value = revealedLetter;
-    myGridInputs[myCurrentRow][col].classList.add("correct", "locked");
-    myGridInputs[myCurrentRow][col].disabled = true;
-
-    // Lock globally
-    lockedPositions[col] = true;
-
-    // Sync Firebase
-    if (isOnlineMode && currentRoomRef) {
-      await currentRoomRef.update({
-        lockedPositions: lockedPositions
-      });
-    }
-  }
-
-  await addCoins(-20);
-
-  isSelectingTile = false;
-  const myMessageEl = isLocalMode ? messageEl1 : (myPlayerNumber === 1 ? messageEl1 : messageEl2);
-  if (myMessageEl) {
-    myMessageEl.textContent = `Harf açıldı: ${revealedLetter}`;
-    setTimeout(() => myMessageEl.textContent = "", 2000);
+    await addCoins(-10);
+    showToast(`💡 ${randomIndex+1}. harf açıldı: ${revealedLetter}`, "info");
   }
 }
 
+async function useRevealTile() {
+    if (!currentUser) { showToast("Giriş yapmalısın!", "error"); return; }
+    if (gameOver) return;
+    if (userCoins < 20) { showToast("Yetersiz altın!", "error"); return; }
 
+    const isMyTurn = isLocalMode || (isOnlineMode && currentTurn === ("player" + myPlayerNumber));
+    if (!isMyTurn) { showToast("Sıra sende değil!", "error"); return; }
 
-// Fog Power-up
-if (fogBtn) {
-  fogBtn.addEventListener("click", async () => {
-    if (!currentUser || gameOver) return;
-    if (userCoins < 20) { await showAlert("Yeterli altınınız yok! (20)"); return; }
-    // Fog logic: Update firebase 'fog' state? 
-    // Or simpler: Send a specific 'event' to opponent?
-    // Let's use a room property: player1Ref/fogged = true
+    isSelectingTile = !isSelectingTile;
+    if (isSelectingTile) {
+        showToast("🎯 Harfini görmek istediğin kutucuğa tıkla!", "info");
+    }
+}
 
-    if (!currentRoomRef) return; // Only online? user requested for "Online/Local" but "opponent" implies online mostly. In local it works too if we switch turns.
+async function useFogBomb() {
+    if (!currentUser || gameOver || !isOnlineMode) return;
+    if (userCoins < 20) { showToast("Yetersiz altın!", "error"); return; }
 
-    await showConfirm("Sis: Rakibinin bir sonraki hamlesinde renkleri gizle. (20 Altın)").then(async (res) => {
-      if (res) {
+    if (!currentRoomRef) return;
+
+    if (await showConfirm("Sis Bombası: Rakibin renkleri göremez. (20 💰)")) {
         await addCoins(-20);
-
-        // Target opponent
         const targetPlayer = myPlayerNumber === 1 ? "player2" : "player1";
-        // We need to set a flag that the opponent listens to.
-        // Let's perform a direct update to rooms/{id}/{targetPlayer}/isFogged = true
         await currentRoomRef.child(targetPlayer + '/isFogged').set(true);
-
-        showAlert("🌫️ Sis Bombası Atıldı!");
-      }
-    });
-  });
+        showToast("🌫️ Sis bombası atıldı!", "info");
+    }
 }
 
 // Listen for Fog (in connectToRoom or similar)
@@ -2464,6 +2250,7 @@ function showFloatingEmoji(emoji, playerKey) {
   }, 2000);
 }
 
+initPowerupListeners();
 initGame();
 
 
