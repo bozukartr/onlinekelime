@@ -295,11 +295,17 @@ async function handleTurnTimeout() {
   // Lock current row as failed
   if (gridInputs[currentRow]) {
     for (let c = 0; c < COLS; c++) {
-      gridInputs[currentRow][c].disabled = true;
-      if (!gridInputs[currentRow][c].value) {
-        gridInputs[currentRow][c].value = "-";
+      const input = gridInputs[currentRow][c];
+      input.disabled = true;
+      if (!input.value) {
+        input.value = "-";
       }
-      gridInputs[currentRow][c].classList.add("absent");
+
+      // Animasyonu tetikle
+      input.classList.add("reveal");
+      setTimeout(() => {
+        input.classList.add("absent");
+      }, 250 + (c * 100));
     }
   }
 
@@ -526,22 +532,26 @@ function evaluateGuess(guess) {
 function colourRow(gridInputs, rowIndex, result) {
   for (let c = 0; c < COLS; c++) {
     const input = gridInputs[rowIndex][c];
-
-    // İpucu (hint) kutusunu bozma, rengini değiştirme
     const isHint = input.classList.contains("hint");
 
-    input.classList.remove("correct", "present", "absent");
-    // locked/hint sınıflarını özellikle silmiyoruz
+    // Animasyonu tetikle
+    input.classList.add("reveal");
 
-    if (!isHint) {
-      if (result[c] === "correct") {
-        input.classList.add("correct");
-      } else if (result[c] === "present") {
-        input.classList.add("present");
-      } else {
-        input.classList.add("absent");
+    // Renk değişimini tam dönüş sırasında (250ms + gecikme) yap
+    const delay = 250 + (c * 100);
+
+    setTimeout(() => {
+      if (!isHint) {
+        input.classList.remove("correct", "present", "absent");
+        if (result[c] === "correct") {
+          input.classList.add("correct");
+        } else if (result[c] === "present") {
+          input.classList.add("present");
+        } else {
+          input.classList.add("absent");
+        }
       }
-    }
+    }, delay);
 
     input.disabled = true;
   }

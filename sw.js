@@ -1,4 +1,4 @@
-const CACHE_NAME = 'online-kelime-v3';
+const CACHE_NAME = 'online-kelime-v4';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
