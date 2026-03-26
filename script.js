@@ -760,7 +760,7 @@ async function handleGuess(playerName, gridInputs, currentRow, messageEl, guessB
 
 
     if (isMyWin && currentUser) {
-      await addCoins(10); // Kazanma ödülü: 10 altın
+      await addCoins(50); // Kazanma ödülü: 50 altın
 
       // İstatistikleri güncelle
       await updateUserStats(true);
