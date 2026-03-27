@@ -1053,6 +1053,7 @@ function resetGame(skipWordSelection = false, forceNewWord = false) {
 
 // Firebase'i başlat
 function initFirebase() {
+  if (auth) return true; // Already initialized
   try {
     if (!firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);
@@ -1062,25 +1063,48 @@ function initFirebase() {
 
     // Auth durumunu dinle
     auth.onAuthStateChanged(async (user) => {
+      console.log("Auth state change:", user ? "User logged in" : "No user");
       if (user) {
         currentUser = user;
         
-        // Giriş yapıldıysa kullanıcı verilerini kontrol et/başlat
-        await initializeUserData(user.uid, user.displayName, user.photoURL);
+        try {
+          // Giriş yapıldıysa kullanıcı verilerini kontrol et/başlat
+          await initializeUserData(user.uid, user.displayName, user.photoURL);
+        } catch (e) {
+          console.error("User init failed:", e);
+        }
         
         showUserProfile(user);
         loadUserData(user.uid);
 
         // Giriş ekranını gizle, mod seçim ekranını göster
-        document.getElementById("login-screen").style.display = "none";
-        document.getElementById("mode-selection").style.display = "block";
+        const loginScr = document.getElementById("login-screen");
+        const modeSel = document.getElementById("mode-selection");
+        if (loginScr) loginScr.style.display = "none";
+        if (modeSel) modeSel.style.display = "block";
       } else {
         currentUser = null;
         hideUserProfile();
 
         // Giriş ekranını göster
-        document.getElementById("login-screen").style.display = "block";
-        document.getElementById("mode-selection").style.display = "none";
+        const loginScr = document.getElementById("login-screen");
+        const modeSel = document.getElementById("mode-selection");
+        if (loginScr) loginScr.style.display = "block";
+        if (modeSel) modeSel.style.display = "none";
+      }
+    });
+
+    // Redirect sonucunu yakala
+    auth.getRedirectResult().then((result) => {
+      if (result && result.user) {
+          console.log("Redirect login successful:", result.user.displayName);
+      }
+    }).catch((error) => {
+      console.error("Redirect logic error:", error);
+      if (error.code === 'auth/network-request-failed') {
+          showToast("Ağ hatası! Lütfen internetinizi kontrol edin.", "error");
+      } else {
+          showToast("Giriş sırasında hata oluştu: " + error.message, "error");
       }
     });
 
@@ -1098,11 +1122,22 @@ async function loginWithGoogle() {
     provider.setCustomParameters({
       prompt: 'select_account'
     });
-
-    // PWA için 'signInWithRedirect' daha güvenlidir
-    auth.signInWithRedirect(provider);
     
-    // Yönlendirme sonrası onAuthStateChanged tetiklenecek
+    // Reverting to Popup as primary, with Redirect as fallback
+    try {
+        console.log("Attempting popup login...");
+        const result = await auth.signInWithPopup(provider);
+        console.log("Popup login success:", result.user.displayName);
+    } catch (popupError) {
+        console.warn("Popup blocked or failed, falling back to redirect:", popupError.code);
+        if (popupError.code === 'auth/popup-blocked' || 
+            popupError.code === 'auth/cancelled-popup-request' ||
+            popupError.code === 'auth/network-request-failed') {
+            auth.signInWithRedirect(provider);
+        } else {
+            alert("Giriş hatası: " + popupError.message);
+        }
+    }
 
     // onAuthStateChanged otomatik olarak ekranları değiştirecek
 
@@ -2463,7 +2498,7 @@ initGame();
 // PWA Service Worker Registration with Auto-Update
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=39')
+    navigator.serviceWorker.register('./sw.js?v=41')
       .then(reg => {
         console.log('SW Registered!', reg);
         
