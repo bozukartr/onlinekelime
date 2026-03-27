@@ -204,6 +204,64 @@ h1 {
   transform: translateY(0);
 }
 
+/* Apple Giriş Butonu */
+.apple-login-btn {
+  width: 100%;
+  padding: 16px 24px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: none;
+  background: #000;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  margin-top: 12px;
+}
+
+.apple-login-btn:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+  background: #111;
+  transform: translateY(-2px);
+}
+
+.apple-login-btn:active {
+  transform: translateY(0);
+}
+
+/* Apple Giriş Butonu */
+.apple-login-btn {
+  width: 100%;
+  padding: 16px 24px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: none;
+  background: #000;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  margin-top: 12px;
+}
+
+.apple-login-btn:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+  background: #111;
+  transform: translateY(-2px);
+}
+
+.apple-login-btn:active {
+  transform: translateY(0);
+}
+
 /* Divider */
 .divider {
   display: flex;

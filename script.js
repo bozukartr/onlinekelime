@@ -1117,6 +1117,8 @@ function initFirebase() {
 
 // Google ile giriş yap
 async function loginWithGoogle() {
+  if (!initFirebase()) return;
+  
   try {
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({
@@ -1150,14 +1152,43 @@ async function loginWithGoogle() {
         }
     }
 
-    // onAuthStateChanged otomatik olarak ekranları değiştirecek
-
   } catch (error) {
     console.error('Google giriş hatası:', error);
-    if (error.code === 'auth/popup-closed-by-user') {
-    } else {
+    if (error.code !== 'auth/popup-closed-by-user') {
       alert('Giriş yapılamadı: ' + error.message);
     }
+  }
+}
+
+// Apple ile Giriş Yap (OAuthProvider)
+async function loginWithApple() {
+  if (!initFirebase()) return;
+
+  try {
+    const provider = new firebase.auth.OAuthProvider('apple.com');
+    provider.addScope('email');
+    provider.addScope('name');
+
+    const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+    if (isStandalone || isIOS) {
+        auth.signInWithRedirect(provider);
+        return;
+    }
+
+    try {
+        const result = await auth.signInWithPopup(provider);
+        await initializeUserData(result.user.uid, result.user.displayName || "Apple User", result.user.photoURL);
+    } catch (popupError) {
+        if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/network-request-failed') {
+            auth.signInWithRedirect(provider);
+        } else {
+            alert("Apple Giriş Hatası: " + popupError.message);
+        }
+    }
+  } catch (error) {
+    console.error('Apple login global error:', error);
   }
 }
 
@@ -1380,6 +1411,11 @@ async function initGame() {
 const googleLoginBtnEl = document.getElementById("googleLoginBtn");
 if (googleLoginBtnEl) {
     googleLoginBtnEl.addEventListener("click", () => loginWithGoogle());
+}
+
+const appleLoginBtnEl = document.getElementById("appleLoginBtn");
+if (appleLoginBtnEl) {
+    appleLoginBtnEl.addEventListener("click", () => loginWithApple());
 }
 
 const skipLoginBtnEl = document.getElementById("skipLoginBtn");
@@ -2526,7 +2562,7 @@ initGame();
 // PWA Service Worker Registration with Auto-Update
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=42')
+    navigator.serviceWorker.register('./sw.js?v=44')
       .then(reg => {
         console.log('SW Registered!', reg);
         
