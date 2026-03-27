@@ -1,4 +1,4 @@
-const CACHE_NAME = 'online-kelime-v42'; // v42 - 2026-03-27 16:30
+const CACHE_NAME = 'online-kelime-v48'; // v48 - 2026-03-27 17:15
 const ASSETS_TO_CACHE = [
     './',
     './index.html',

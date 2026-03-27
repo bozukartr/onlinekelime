@@ -150,7 +150,7 @@ async function showGameEndModal(isWin, word) {
 
 // Sanal Klavye Oluştur
 function createKeyboard() {
-  const container = document.getElementById("keyboard-container");
+  const container = document.getElementById("virtual-keyboard");
   if (!container) return;
   container.innerHTML = '';
 
@@ -199,8 +199,10 @@ function handleKeyClick(key) {
      guessBtn.click();
   } else if (key === '😊') {
      toggleEmojiBar();
-  } else if (['⬆️', '123', 'SPACE'].includes(key)) {
-     // Bu tuşlar Wordle için sadece görsel, işlevsiz bırakabiliriz
+  } else if (key === '⬆️' || key === 'UP_ARROW') {
+     console.log("Powerup key clicked");
+     togglePowerupMenu();
+  } else if (['123', 'SPACE', '⬆️'].includes(key)) {
      return;
   } else {
     // Harf ekle
@@ -1044,7 +1046,7 @@ function resetGame(skipWordSelection = false, forceNewWord = false) {
   }
 
   createKeyboard();
-
+  initPowerupListeners();
 }
 
 // ======================
@@ -1258,17 +1260,17 @@ function updateCoinsDisplay() {
 
 // Power-up butonlarını güncelle (yeterli altın var mı?)
 function updatePowerupButtons() {
-  const revealBtns = document.querySelectorAll('[id^="revealLetterBtn"]');
-  const tileBtns = document.querySelectorAll('[id^="revealTileBtn"]');
-  const fogBtns = document.querySelectorAll('[id^="fogBtn"]');
+  const rBtn = document.getElementById("revealLetterBtn");
+  const tBtn = document.getElementById("revealTileBtn");
+  const fBtn = document.getElementById("fogBtn");
 
   const canAffordLetter = userCoins >= 10 && !gameOver;
   const canAffordTile = userCoins >= 20 && !gameOver;
   const canAffordFog = userCoins >= 30 && !gameOver && isOnlineMode;
 
-  revealBtns.forEach(btn => btn.disabled = !canAffordLetter || !currentUser);
-  tileBtns.forEach(btn => btn.disabled = !canAffordTile || !currentUser);
-  fogBtns.forEach(btn => btn.disabled = !canAffordFog || !currentUser);
+  if (rBtn) rBtn.disabled = !canAffordLetter || !currentUser;
+  if (tBtn) tBtn.disabled = !canAffordTile || !currentUser;
+  if (fBtn) fBtn.disabled = !canAffordFog || !currentUser;
 }
 
 
@@ -2040,7 +2042,10 @@ function applyOpponentGuess(guessData) {
     
     currentRoomRef.child(otherPlayerKey + '/isFogged').once('value', (snapshot) => {
         const otherIsFogged = snapshot.val();
-        applyGuessToBoard(otherGridInputs, rowIndex, guessData.guess, guessData.result, otherIsFogged);
+        
+        // Attacker sees everything clearly, only the victim sees fog
+        // So we pass 'false' for forceFog here
+        applyGuessToBoard(otherGridInputs, rowIndex, guessData.guess, guessData.result, false);
         
         if (myPlayerNumber === 1) {
           currentRow2 = guessData.currentRow;
@@ -2048,10 +2053,8 @@ function applyOpponentGuess(guessData) {
           currentRow1 = guessData.currentRow;
         }
 
-        // Rakibin bulduğu harfleri de klavyede göster (Eğer sis yoksa)
-        if (!otherIsFogged) {
-          updateKeyColors(guessData.guess, guessData.result);
-        }
+        // Even if opponent is fogged, we can still update our keyboard with their colors
+        updateKeyColors(guessData.guess, guessData.result);
     });
 
   }
@@ -2260,15 +2263,13 @@ async function updateUserStats(won) {
 
 // Power-up event listeners
 function initPowerupListeners() {
-    document.querySelectorAll('[id^="revealLetterBtn"]').forEach(btn => {
-        btn.addEventListener("click", () => useRevealLetter());
-    });
-    document.querySelectorAll('[id^="revealTileBtn"]').forEach(btn => {
-        btn.addEventListener("click", () => useRevealTile());
-    });
-    document.querySelectorAll('[id^="fogBtn"]').forEach(btn => {
-        btn.addEventListener("click", () => useFogBomb());
-    });
+    const rBtn = document.getElementById("revealLetterBtn");
+    const tBtn = document.getElementById("revealTileBtn");
+    const fBtn = document.getElementById("fogBtn");
+
+    if (rBtn) rBtn.onclick = () => { useRevealLetter(); togglePowerupMenu(); };
+    if (tBtn) tBtn.onclick = () => { useRevealTile(); togglePowerupMenu(); };
+    if (fBtn) fBtn.onclick = () => { useFogBomb(); togglePowerupMenu(); };
 }
 
 async function useRevealLetter() {
@@ -2336,14 +2337,21 @@ async function handleTileSelection(row, col) {
         await addCoins(-20);
         gridInputs[row][col].value = letter;
         gridInputs[row][col].disabled = true;
-        gridInputs[row][col].classList.add("hint");
-        showToast(`🎯 ${col+1}. harf: ${letter.toLocaleUpperCase('tr-TR')}`, "info");
+        gridInputs[row][col].classList.add("correct", "locked", "hint");
+        
+        // Mark as locked so 10-coin reveal won't pick it again
+        lockedPositions[col] = true;
+        if (isOnlineMode && currentRoomRef) {
+          await currentRoomRef.update({ lockedPositions: lockedPositions });
+        }
+
+        showToast(`🎯 ${col+1}. harf açıldı: ${letter.toLocaleUpperCase('tr-TR')}`, "info");
     }
 }
 
 async function useFogBomb() {
     if (!currentUser || gameOver || !isOnlineMode) return;
-    if (userCoins < 20) { showToast("Yetersiz altın!", "error"); return; }
+    if (userCoins < 30) { showToast("Yetersiz altın!", "error"); return; }
 
     if (!currentRoomRef) return;
 
@@ -2355,8 +2363,38 @@ async function useFogBomb() {
     }
 }
 
-// Listen for Fog (in connectToRoom or similar)
-// We need to add this listener inside connectToRoom
+function togglePowerupMenu() {
+    const menu = document.getElementById("powerup-menu");
+    if (!menu) {
+        console.error("Powerup menu element not found!");
+        return;
+    }
+    const isHidden = menu.style.display === "none" || menu.style.display === "";
+    console.log("Toggling menu. Is hidden before:", isHidden);
+    
+    menu.style.display = isHidden ? "flex" : "none";
+    
+    if (menu.style.display === "flex") {
+        updatePowerupButtons();
+        // Close other bars
+        const emojiBar = document.getElementById("emoji-bar");
+        if (emojiBar) emojiBar.style.display = "none";
+    }
+}
+
+// Global click listener to close menu when clicking outside
+document.addEventListener("mousedown", (e) => {
+    const menu = document.getElementById("powerup-menu");
+    // Get all potential shift keys (by icon or index)
+    if (menu && menu.style.display === "flex") {
+        const isClickInsideMenu = menu.contains(e.target);
+        const isClickOnShift = e.target.textContent === '⬆️' || e.target.closest(".key.tool-key");
+        
+        if (!isClickInsideMenu && !isClickOnShift) {
+            menu.style.display = "none";
+        }
+    }
+});
 
 
 
@@ -2501,7 +2539,7 @@ initGame();
 // PWA Service Worker Registration with Auto-Update
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=42')
+    navigator.serviceWorker.register('./sw.js?v=48')
       .then(reg => {
         console.log('SW Registered!', reg);
         

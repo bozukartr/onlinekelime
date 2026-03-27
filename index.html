@@ -17,7 +17,7 @@
   <link rel="icon" type="image/png" href="icon-512.png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=42">
+  <link rel="stylesheet" href="styles.css?v=48">
 </head>
 
 <body>
@@ -186,23 +186,12 @@
         <div id="board1" class="board"></div>
         <!-- Guess Button Hidden (Keyboard Enter used instead) -->
       <button id="guessButton1" class="guess-button" style="display: none;">Tahmini Kontrol Et</button>
-        <div id="powerups-player1" class="powerups-grid-mini">
-            <!-- Powerups will be moved here in a compact form -->
-            <button id="revealLetterBtn1" class="powerup-btn-mini" title="İpucu"><span>💡</span><small>10</small></button>
-            <button id="revealTileBtn1" class="powerup-btn-mini" title="Harf Seç"><span>🎯</span><small>20</small></button>
-            <button id="fogBtn1" class="powerup-btn-mini" title="Sis Bombası"><span>🌫️</span><small>30</small></button>
-        </div>
       </div>
 
       <div class="player-section" id="player2Section">
 
         <div id="board2" class="board"></div>
         <button id="guessButton2" class="guess-button" style="display: none;">Tahmini Kontrol Et</button>
-        <div id="powerups-player2" class="powerups-grid-mini">
-            <button id="revealLetterBtn2" class="powerup-btn-mini" title="İpucu"><span>💡</span><small>10</small></button>
-            <button id="revealTileBtn2" class="powerup-btn-mini" title="Harf Seç"><span>🎯</span><small>20</small></button>
-            <button id="fogBtn2" class="powerup-btn-mini" title="Sis Bombası"><span>🌫️</span><small>30</small></button>
-        </div>
       </div>
     </div>
 
@@ -216,7 +205,18 @@
       </div>
 
       <!-- Sanal Klavye -->
-      <div id="keyboard-container" class="keyboard-container"></div>
+      <div id="keyboard-container" class="keyboard-container" style="position: relative;">
+          <!-- Powerup Menu Overlay -->
+          <div id="powerup-menu" class="powerup-menu-overlay" style="display: none;">
+              <div class="powerup-menu-title">🚀 Özellikler</div>
+              <div class="powerups-grid-mini">
+                  <button id="revealLetterBtn" class="powerup-btn-mini" title="Harf İpucu"><span>💡</span><small>10</small></button>
+                  <button id="revealTileBtn" class="powerup-btn-mini" title="Harf Seç"><span>🎯</span><small>20</small></button>
+                  <button id="fogBtn" class="powerup-btn-mini" title="Sis Bombası"><span>🌫️</span><small>30</small></button>
+              </div>
+          </div>
+          <div id="virtual-keyboard"></div>
+      </div>
 
       <!-- Emoji Bar (Gizli) -->
       <div id="emoji-bar" class="emoji-bar" style="display: none;">
@@ -268,7 +268,12 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 
-  <script src="script.js?v=42"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js?v=48');
+    }
+  </script>
+  <script src="script.js?v=48"></script>
 
 
 </body>
