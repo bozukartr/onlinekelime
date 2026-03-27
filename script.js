@@ -1060,6 +1060,9 @@ function initFirebase() {
     }
     database = firebase.database();
     auth = firebase.auth();
+    
+    // Explicitly set persistence to LOCAL
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
     // Auth durumunu dinle
     auth.onAuthStateChanged(async (user) => {
@@ -1117,26 +1120,13 @@ function initFirebase() {
 
 // Google ile giriş yap
 async function loginWithGoogle() {
-  if (!initFirebase()) return;
-  
   try {
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({
       prompt: 'select_account'
     });
     
-    // Cihaz ve Mod kontrolü
-    const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
-    // PWA veya iOS ise direkt Redirect kullan (Popup genellikle bloklanır)
-    if (isStandalone || isIOS) {
-        console.log("PWA/iOS detected: forcing redirect...");
-        auth.signInWithRedirect(provider);
-        return;
-    }
-
-    // Normal tarayıcı için Popup öncelikli Hibrit Strateji
+    // Reverting to Popup as primary, with Redirect as fallback
     try {
         console.log("Attempting popup login...");
         const result = await auth.signInWithPopup(provider);
@@ -1148,47 +1138,18 @@ async function loginWithGoogle() {
             popupError.code === 'auth/network-request-failed') {
             auth.signInWithRedirect(provider);
         } else {
-            alert("Giriş hatası (" + popupError.code + "): " + popupError.message);
+            alert("Giriş hatası: " + popupError.message);
         }
     }
+
+    // onAuthStateChanged otomatik olarak ekranları değiştirecek
 
   } catch (error) {
     console.error('Google giriş hatası:', error);
-    if (error.code !== 'auth/popup-closed-by-user') {
+    if (error.code === 'auth/popup-closed-by-user') {
+    } else {
       alert('Giriş yapılamadı: ' + error.message);
     }
-  }
-}
-
-// Apple ile Giriş Yap (OAuthProvider)
-async function loginWithApple() {
-  if (!initFirebase()) return;
-
-  try {
-    const provider = new firebase.auth.OAuthProvider('apple.com');
-    provider.addScope('email');
-    provider.addScope('name');
-
-    const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
-    if (isStandalone || isIOS) {
-        auth.signInWithRedirect(provider);
-        return;
-    }
-
-    try {
-        const result = await auth.signInWithPopup(provider);
-        await initializeUserData(result.user.uid, result.user.displayName || "Apple User", result.user.photoURL);
-    } catch (popupError) {
-        if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/network-request-failed') {
-            auth.signInWithRedirect(provider);
-        } else {
-            alert("Apple Giriş Hatası: " + popupError.message);
-        }
-    }
-  } catch (error) {
-    console.error('Apple login global error:', error);
   }
 }
 
@@ -1352,23 +1313,6 @@ async function logout() {
   }
 }
 
-// Zorla önbellek temizle (Diğer telefonlardaki eski SW sorunları için)
-async function forceClearCache() {
-    if (confirm("Uygulamayı sıfırlamak ve en güncel sürümü yüklemek istiyor musunuz? (Giriş yapmanız gerekecek)")) {
-        if ('serviceWorker' in navigator) {
-            const registrations = await navigator.serviceWorker.getRegistrations();
-            for (let registration of registrations) {
-                await registration.unregister();
-            }
-        }
-        const names = await caches.keys();
-        for (let name of names) {
-            await caches.delete(name);
-        }
-        window.location.reload(true);
-    }
-}
-
 // Sayfa yüklendiğinde kelimeleri yükle
 // Sayfa yüklendiğinde kelimeleri yükle
 async function initGame() {
@@ -1411,11 +1355,6 @@ async function initGame() {
 const googleLoginBtnEl = document.getElementById("googleLoginBtn");
 if (googleLoginBtnEl) {
     googleLoginBtnEl.addEventListener("click", () => loginWithGoogle());
-}
-
-const appleLoginBtnEl = document.getElementById("appleLoginBtn");
-if (appleLoginBtnEl) {
-    appleLoginBtnEl.addEventListener("click", () => loginWithApple());
 }
 
 const skipLoginBtnEl = document.getElementById("skipLoginBtn");
@@ -2562,7 +2501,7 @@ initGame();
 // PWA Service Worker Registration with Auto-Update
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=44')
+    navigator.serviceWorker.register('./sw.js?v=42')
       .then(reg => {
         console.log('SW Registered!', reg);
         

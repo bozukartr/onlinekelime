@@ -1,4 +1,4 @@
-const CACHE_NAME = 'online-kelime-v44'; // v44 - 2026-03-27 16:25
+const CACHE_NAME = 'online-kelime-v42'; // v42 - 2026-03-27 16:30
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -33,13 +33,13 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-    // Exclude Firebase Auth and Google APIs from SW interception
+    // Bypass SW for Firebase Auth and Google domains
     if (event.request.url.includes('/__/auth/') || 
         event.request.url.includes('googleapis.com') || 
         event.request.url.includes('firebase.com') || 
         event.request.url.includes('google.com') ||
         event.request.url.includes('firebaseapp.com')) {
-        return; 
+        return; // Browser handles normally
     }
 
     // Network-First strategy
