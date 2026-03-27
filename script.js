@@ -2325,7 +2325,7 @@ async function handleTileSelection(row, col) {
 
     const gridInputs = (myPlayerNumber === 2) ? gridInputs2 : gridInputs1;
     const currRow = (myPlayerNumber === 2) ? currentRow2 : currentRow1;
-    const targetWord = isLocalMode ? secretWord : mySecretWord;
+    const targetWord = secretWord;
 
     if (!targetWord) { showToast("Kelime henüz belirlenmedi!", "error"); return; }
     if (row !== currRow) { showToast("Sadece aktif satırdaki kutuları seçebilirsin!", "error"); return; }
@@ -2539,7 +2539,7 @@ initGame();
 // PWA Service Worker Registration with Auto-Update
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=48')
+    navigator.serviceWorker.register('./sw.js?v=49')
       .then(reg => {
         console.log('SW Registered!', reg);
         
