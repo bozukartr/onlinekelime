@@ -1270,7 +1270,16 @@ body:has(#game-screen[style*="display: block"]) #connection-status {
   background: linear-gradient(135deg, #3a3a4a, #2a2a3a) !important;
   border-color: #444 !important;
   color: #888 !important;
-  filter: blur(1px);
+  filter: blur(1.5px);
+}
+
+/* Keyboard Fogged - Hide Colors */
+.keyboard-fogged .key.correct,
+.keyboard-fogged .key.present,
+.keyboard-fogged .key.absent {
+  background: #444 !important;
+  color: white !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
 }
 
 @media (max-width: 768px) {

@@ -2002,8 +2002,10 @@ function applyOpponentGuess(guessData) {
       currentRow1 = guessData.currentRow;
     }
 
-    // Rakibin bulduğu harfleri de klavyede göster
-    updateKeyColors(guessData.guess, guessData.result);
+    // Rakibin bulduğu harfleri de klavyede göster (Eğer sis yoksa)
+    if (!isFogged || fogTurnsLeft <= 0) {
+      updateKeyColors(guessData.guess, guessData.result);
+    }
 
   }
 }
@@ -2070,6 +2072,9 @@ function applyGuessToBoard(gridInputs, rowIndex, guess, result) {
     // Fog Check - scramble positions and hide real colors
     if (isFogged && fogTurnsLeft > 0) {
       input.classList.add("fogged");
+      // Rastgele harf göster (Kafa karıştırmak için)
+      const alphabet = "abcçdefgğhıijklmnoöprsştuüvyz";
+      input.value = alphabet[Math.floor(Math.random() * alphabet.length)];
       // Don't add real color classes - opponent sees nothing
     } else {
       if (result[c] === "correct") {
@@ -2086,16 +2091,19 @@ function applyGuessToBoard(gridInputs, rowIndex, guess, result) {
 
   // Fog durumunda klavye renklerini de gizle
   if (isFogged && fogTurnsLeft > 0) {
-    // Klavyeyi güncellemiyoruz - rakip hangi harflerin doğru olduğunu göremiyor
+    // Klavyeye 'fogged' sınıfı ekle (CSS ile renkleri saklayacağız)
+    document.getElementById("virtual-keyboard").classList.add("keyboard-fogged");
+    
     fogTurnsLeft--;
     if (fogTurnsLeft <= 0) {
       isFogged = false;
       fogTurnsLeft = 0;
       const myKey = 'player' + myPlayerNumber;
       if (currentRoomRef) currentRoomRef.child(myKey + '/isFogged').set(false);
-      showToast("✨ Sis kalkti! Artık renkleri görebilirsin.", "info");
+      document.getElementById("virtual-keyboard").classList.remove("keyboard-fogged");
+      showToast("✨ Sis kalktı! Artık renkleri görebilirsin.", "info");
     } else {
-      showToast(`🌫️ Sis devam ediyor! (${fogTurnsLeft} tur kaldı)`, "warning");
+      showToast(` Greenway 🌫️ Sis devam ediyor! (${fogTurnsLeft} tur kaldı)`, "warning");
     }
   } else {
     // Normal durumda klavyeyi güncelle
