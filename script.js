@@ -1224,7 +1224,7 @@ function updatePowerupButtons() {
 
   const canAffordLetter = userCoins >= 10 && !gameOver;
   const canAffordTile = userCoins >= 20 && !gameOver;
-  const canAffordFog = userCoins >= 20 && !gameOver && isOnlineMode;
+  const canAffordFog = userCoins >= 30 && !gameOver && isOnlineMode;
 
   revealBtns.forEach(btn => btn.disabled = !canAffordLetter || !currentUser);
   tileBtns.forEach(btn => btn.disabled = !canAffordTile || !currentUser);
@@ -1994,18 +1994,25 @@ function applyOpponentGuess(guessData) {
   const rowIndex = guessData.currentRow - 1;
 
   if (rowIndex >= 0 && rowIndex < ROWS && otherGridInputs[rowIndex]) {
-    applyGuessToBoard(otherGridInputs, rowIndex, guessData.guess, guessData.result);
+    // Rakibin sisli olup olmadığını kontrol et
+    // Eğer rakip sisliyse biz de onun tahtasını sisli görürüz (symmetrical fog)
+    const otherPlayerKey = myPlayerNumber === 1 ? 'player2' : 'player1';
+    
+    currentRoomRef.child(otherPlayerKey + '/isFogged').once('value', (snapshot) => {
+        const otherIsFogged = snapshot.val();
+        applyGuessToBoard(otherGridInputs, rowIndex, guessData.guess, guessData.result, otherIsFogged);
+        
+        if (myPlayerNumber === 1) {
+          currentRow2 = guessData.currentRow;
+        } else {
+          currentRow1 = guessData.currentRow;
+        }
 
-    if (myPlayerNumber === 1) {
-      currentRow2 = guessData.currentRow;
-    } else {
-      currentRow1 = guessData.currentRow;
-    }
-
-    // Rakibin bulduğu harfleri de klavyede göster (Eğer sis yoksa)
-    if (!isFogged || fogTurnsLeft <= 0) {
-      updateKeyColors(guessData.guess, guessData.result);
-    }
+        // Rakibin bulduğu harfleri de klavyede göster (Eğer sis yoksa)
+        if (!otherIsFogged) {
+          updateKeyColors(guessData.guess, guessData.result);
+        }
+    });
 
   }
 }
@@ -2059,8 +2066,11 @@ async function handleOnlineGameEnd(winnerPlayer) {
 }
 
 // Rakibin tahminini tahtaya uygula
-function applyGuessToBoard(gridInputs, rowIndex, guess, result) {
+function applyGuessToBoard(gridInputs, rowIndex, guess, result, forceFog = false) {
   if (!gridInputs[rowIndex]) return;
+
+  // Sis kontrolü (Yerel durum veya zorunlu durum)
+  const activeFog = forceFog || (isFogged && fogTurnsLeft > 0);
 
   for (let c = 0; c < COLS; c++) {
     const input = gridInputs[rowIndex][c];
@@ -2070,7 +2080,7 @@ function applyGuessToBoard(gridInputs, rowIndex, guess, result) {
     input.classList.remove("correct", "present", "absent", "locked", "hint", "fogged");
 
     // Fog Check - scramble positions and hide real colors
-    if (isFogged && fogTurnsLeft > 0) {
+    if (activeFog) {
       input.classList.add("fogged");
       // Rastgele harf göster (Kafa karıştırmak için)
       const alphabet = "abcçdefgğhıijklmnoöprsştuüvyz";
@@ -2089,8 +2099,8 @@ function applyGuessToBoard(gridInputs, rowIndex, guess, result) {
     input.disabled = true;
   }
 
-  // Fog durumunda klavye renklerini de gizle
-  if (isFogged && fogTurnsLeft > 0) {
+  // Sadece yerel oyuncu sis altındaysa sayaçları ve klavyeyi yönet
+  if (!forceFog && isFogged && fogTurnsLeft > 0) {
     // Klavyeye 'fogged' sınıfı ekle (CSS ile renkleri saklayacağız)
     document.getElementById("virtual-keyboard").classList.add("keyboard-fogged");
     
@@ -2103,9 +2113,9 @@ function applyGuessToBoard(gridInputs, rowIndex, guess, result) {
       document.getElementById("virtual-keyboard").classList.remove("keyboard-fogged");
       showToast("✨ Sis kalktı! Artık renkleri görebilirsin.", "info");
     } else {
-      showToast(` Greenway 🌫️ Sis devam ediyor! (${fogTurnsLeft} tur kaldı)`, "warning");
+      showToast(`🌫️ Sis devam ediyor! (${fogTurnsLeft} tur kaldı)`, "warning");
     }
-  } else {
+  } else if (!activeFog) {
     // Normal durumda klavyeyi güncelle
     updateKeyColors(guess, result);
   }
@@ -2297,8 +2307,8 @@ async function useFogBomb() {
 
     if (!currentRoomRef) return;
 
-    if (await showConfirm("Sis Bombası: Rakip 2 tur boyunca renkleri ve klavyeyi göremez! (20 💰)")) {
-        await addCoins(-20);
+    if (await showConfirm("Sis Bombası: Rakip 2 tur boyunca renkleri ve klavyeyi göremez! (30 💰)")) {
+        await addCoins(-30);
         const targetPlayer = myPlayerNumber === 1 ? "player2" : "player1";
         await currentRoomRef.child(targetPlayer + '/isFogged').set(true);
         showToast("🌫️ Sis bombası atıldı! Rakip 2 tur boyunca kör!", "info");
