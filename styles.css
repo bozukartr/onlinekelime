@@ -6,6 +6,10 @@
 body {
   margin: 0;
   padding: 16px;
+  padding-top: max(16px, env(safe-area-inset-top));
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
   background: #0a0a0f;
   color: #eee;
   display: flex;
@@ -1247,17 +1251,26 @@ body:has(#game-screen[style*="display: block"]) #connection-status {
 }
 
 .fogged {
-  background-color: #555 !important;
-  color: #fff !important;
-  border-color: #777 !important;
+  background: linear-gradient(135deg, #3a3a4a, #2a2a3a) !important;
+  color: #888 !important;
+  border-color: #555 !important;
+  filter: blur(1px);
+  animation: fogPulse 2s ease-in-out infinite;
+}
+
+@keyframes fogPulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 }
 
 /* Override colors when fogged */
 .fogged.correct,
 .fogged.present,
 .fogged.absent {
-  background-color: #333 !important;
+  background: linear-gradient(135deg, #3a3a4a, #2a2a3a) !important;
   border-color: #444 !important;
+  color: #888 !important;
+  filter: blur(1px);
 }
 
 @media (max-width: 768px) {
@@ -1280,6 +1293,7 @@ body:has(#game-screen[style*="display: block"]) #connection-status {
     display: flex;
     flex-direction: column;
     padding: 4px;
+    padding-top: max(4px, env(safe-area-inset-top));
     align-items: center;
   }
 
@@ -1334,11 +1348,12 @@ body:has(#game-screen[style*="display: block"]) #connection-status {
   .keyboard-container {
     width: 100%;
     max-width: 420px;
-    margin: 4px auto 20px;
+    margin: 4px auto 0;
+    padding: 0 4px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
     display: flex;
     flex-direction: column;
     gap: 5px;
-    padding: 0 4px;
     background: transparent;
   }
 
