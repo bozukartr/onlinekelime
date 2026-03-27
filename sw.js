@@ -1,4 +1,4 @@
-const CACHE_NAME = 'online-kelime-v12'; // v12 - 2026-03-26 04:14
+const CACHE_NAME = 'online-kelime-v31'; // v31 - 2026-03-27 15:12
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -33,9 +33,29 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-    event.respondWith(
-        caches.match(event.request).then(response => {
-            return response || fetch(event.request);
-        })
-    );
+    // Skip non-GET requests (like POST) as they cannot be cached
+    if (event.request.method !== 'GET') return;
+    
+    // Network-First strategy
+    const isCoreAsset = ASSETS_TO_CACHE.some(asset => event.request.url.includes(asset.replace('./', '')));
+
+    if (isCoreAsset || event.request.mode === 'navigate') {
+        event.respondWith(
+            fetch(event.request)
+                .then(networkResponse => {
+                    return caches.open(CACHE_NAME).then(cache => {
+                        cache.put(event.request, networkResponse.clone());
+                        return networkResponse;
+                    });
+                })
+                .catch(() => caches.match(event.request))
+        );
+    } else {
+        // Cache-First for other things (icons, etc)
+        event.respondWith(
+            caches.match(event.request).then(response => {
+                return response || fetch(event.request);
+            })
+        );
+    }
 });

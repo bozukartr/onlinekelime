@@ -97,6 +97,14 @@ let isFogged = false;    // For me (being victim)
 // Selection Mode State
 let isSelectingTile = false;
 
+// Sanal Klavye Düzeni (Görseldeki 4 satırlı tasarım)
+const KEYBOARD_LAYOUT = [
+  ['q', 'w', 'e', 'r', 't', 'y', 'u', 'ı', 'o', 'p', 'ğ', 'ü'],
+  ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'ş', 'i'],
+  ['⬆️', 'z', 'x', 'c', 'v', 'b', 'n', 'm', 'ö', 'ç', '⌫'],
+  ['123', '😊', 'SPACE', '↵']
+];
+
 
 
 
@@ -116,26 +124,155 @@ function showToast(message, type = "info", duration = 3000) {
   }, duration);
 }
 
+// Oyun Sonu Modal
+async function showGameEndModal(isWin, word) {
+  const title = isWin ? "🎉 TEBRİKLER!" : "😔 OYUN BİTTİ";
+  const message = isWin ? 
+    `Harika! Kelimeyi doğru buldun: <strong>${word}</strong>` : 
+    `Maalesef tahmin hakkın doldu. Doğru kelime: <strong>${word}</strong>`;
+  
+  // Modal butonları
+  const actions = [
+    { text: "Yeni Oyun", primary: true, callback: () => {
+        if (isOnlineMode && myPlayerNumber === 2) {
+            showToast("Sadece oda sahibi yeni oyun başlatabilir.", "info");
+        } else {
+            // New game button'a tıklanmış gibi davran
+            document.getElementById("newGameButton").click();
+        }
+    }},
+    { text: "Kapat", callback: () => {} }
+  ];
+
+  await showCustomModal(title, message, actions);
+}
+
+// Sanal Klavye Oluştur
+function createKeyboard() {
+  const container = document.getElementById("keyboard-container");
+  if (!container) return;
+  container.innerHTML = '';
+
+  KEYBOARD_LAYOUT.forEach(row => {
+    const rowEl = document.createElement("div");
+    rowEl.className = "keyboard-row";
+
+    row.forEach(key => {
+      const btn = document.createElement("button");
+      btn.textContent = key;
+      btn.className = "key";
+      
+      // Özel buton sınıfları
+      if (key === 'SPACE') btn.classList.add("space-key");
+      if (key === '↵') btn.classList.add("enter-key");
+      if (['⬆️', '⌫', '123', '😊'].includes(key)) btn.classList.add("tool-key");
+      
+      btn.id = `key-${key.toLowerCase()}`;
+      btn.onclick = () => handleKeyClick(key);
+      rowEl.appendChild(btn);
+    });
+
+    container.appendChild(rowEl);
+  });
+}
+
+function handleKeyClick(key) {
+  if (gameOver) return;
+
+  const currentBoard = (myPlayerNumber === 2) ? gridInputs2 : gridInputs1;
+  const currRow = (myPlayerNumber === 2) ? currentRow2 : currentRow1;
+  const guessBtn = (myPlayerNumber === 2) ? guessButton2 : guessButton1;
+
+  if (!currentBoard[currRow]) return;
+
+  if (key === '⌫') {
+    // Son harfi sil
+    for (let i = COLS - 1; i >= 0; i--) {
+      if (currentBoard[currRow][i].value && !currentBoard[currRow][i].disabled) {
+        currentBoard[currRow][i].value = '';
+        currentBoard[currRow][i].focus();
+        break;
+      }
+    }
+  } else if (key === '↵') {
+     guessBtn.click();
+  } else if (key === '😊') {
+     toggleEmojiBar();
+  } else if (['⬆️', '123', 'SPACE'].includes(key)) {
+     // Bu tuşlar Wordle için sadece görsel, işlevsiz bırakabiliriz
+     return;
+  } else {
+    // Harf ekle
+    for (let i = 0; i < COLS; i++) {
+      if (!currentBoard[currRow][i].value) {
+        currentBoard[currRow][i].value = key.toLocaleLowerCase('tr-TR');
+        if (i < COLS - 1) currentBoard[currRow][i+1].focus();
+        break;
+      }
+    }
+  }
+}
+
+function toggleEmojiBar() {
+  const bar = document.getElementById("emoji-bar");
+  if (bar) {
+    const isHidden = bar.style.display === "none";
+    bar.style.display = isHidden ? "flex" : "none";
+    
+    // Açıldığında klavyenin üstüne veya altına kaymasını engellemek için küçük bir margin ayarı
+    if (!isHidden) {
+      bar.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  }
+}
+
+function updateKeyColors(guess, result) {
+    for (let i = 0; i < guess.length; i++) {
+        // Türkçe karakter duyarlı lowercase (I -> ı, İ -> i)
+        const char = guess[i].toLocaleLowerCase('tr-TR');
+        const res = result[i];
+        const keyBtn = document.getElementById(`key-${char}`);
+        if (!keyBtn) continue;
+
+        if (res === "correct") {
+            keyBtn.classList.add("correct");
+            keyBtn.classList.remove("present", "absent");
+        } else if (res === "present") {
+            // Sadece daha önce doğru (yeşil) bulunmadıysa sarı yap
+            if (!keyBtn.classList.contains("correct")) {
+                keyBtn.classList.add("present");
+                keyBtn.classList.remove("absent");
+            }
+        } else if (res === "absent") {
+            // Daha önce yeşil veya sarı bulunmadıysa gri yap
+            if (!keyBtn.classList.contains("correct") && !keyBtn.classList.contains("present")) {
+                keyBtn.classList.add("absent");
+            }
+        }
+    }
+}
+
 const customModal = document.getElementById('customModal');
 const modalTitle = document.getElementById('modalTitle');
 const modalMessage = document.getElementById('modalMessage');
 const modalActions = document.getElementById('modalActions');
 
-function showModal(title, message, buttons) {
+function showCustomModal(title, message, actions = []) {
   return new Promise((resolve) => {
     if (!customModal) return resolve(null);
 
     modalTitle.textContent = title;
-    modalMessage.textContent = message;
+    modalMessage.innerHTML = message; // innerHTML for <strong>
     modalActions.innerHTML = '';
 
-    buttons.forEach(btn => {
+    actions.forEach(btn => {
       const buttonEl = document.createElement('button');
       buttonEl.textContent = btn.text;
-      buttonEl.className = `modal-btn ${btn.class || ''}`;
+      buttonEl.className = `modal-btn ${btn.primary ? 'modal-btn-confirm' : 'modal-btn-cancel'}`;
       buttonEl.onclick = () => {
         customModal.style.display = 'none';
-        resolve(btn.value);
+        if (btn.callback) btn.callback();
+        resolve(true);
       };
       modalActions.appendChild(buttonEl);
     });
@@ -145,16 +282,18 @@ function showModal(title, message, buttons) {
 }
 
 async function showAlert(message, title = "Bilgi") {
-  return showModal(title, message, [
-    { text: 'Tamam', value: true, class: 'modal-btn-confirm' }
+  return showCustomModal(title, message, [
+    { text: 'Tamam', primary: true }
   ]);
 }
 
 async function showConfirm(message, title = "Onay") {
-  return showModal(title, message, [
-    { text: 'İptal', value: false, class: 'modal-btn-cancel' },
-    { text: 'Evet', value: true, class: 'modal-btn-confirm' }
-  ]);
+  return new Promise((resolve) => {
+      showCustomModal(title, message, [
+        { text: 'İptal', primary: false, callback: () => resolve(false) },
+        { text: 'Evet', primary: true, callback: () => resolve(true) }
+      ]);
+  });
 }
 
 
@@ -286,16 +425,14 @@ async function handleTurnTimeout() {
   if (gameOver) return;
 
 
-  let gridInputs, currentRow, messageEl;
+  let gridInputs, currentRow;
 
   if (currentTurn === "player1") {
     gridInputs = gridInputs1;
     currentRow = currentRow1;
-    messageEl = messageEl1;
   } else {
     gridInputs = gridInputs2;
     currentRow = currentRow2;
-    messageEl = messageEl2;
   }
 
   // Show message
@@ -372,7 +509,8 @@ function createBoard(boardEl, gridInputs, guessButton) {
 
     for (let c = 0; c < COLS; c++) {
       const input = document.createElement("input");
-      input.type = "text";
+      input.readOnly = true;
+      input.setAttribute("inputmode", "none");
       input.maxLength = 1;
       input.className = "tile";
       input.autocomplete = "off";
@@ -729,12 +867,12 @@ async function handleGuess(playerName, gridInputs, currentRow, messageEl, guessB
 
   const result = evaluateGuess(guess);
   colourRow(gridInputs, currentRow, result);
+  updateKeyColors(guess, result); // Klavyeyi boya
   const hasNewLocks = lockGreenPositions(result);
 
 
   if (guess === secretWord) {
     winner = playerName;
-    showToast("🎉 TEBRİKLER! Kelimi buldun: " + secretWord, "win", 5000);
     gameOver = true;
     guessButton1.disabled = true;
     guessButton2.disabled = true;
@@ -742,15 +880,15 @@ async function handleGuess(playerName, gridInputs, currentRow, messageEl, guessB
     // Yeni Oyun butonunu göster
     showNewGameButton();
 
+    const isMyWin = (playerName === "player1" && (isLocalMode || myPlayerNumber === 1)) ||
+                    (playerName === "player2" && myPlayerNumber === 2);
+    
+    showGameEndModal(isMyWin, secretWord);
+
     // Diğer oyuncuya kaybettiğini göster
     if (isOnlineMode) {
         // Rakip zaten kendi SW listener'ı ile alacak
     }
-
-    // Altın kazan (sadece ben kazandıysam)
-    const isMyWin = (playerName === "player1" && (isLocalMode || myPlayerNumber === 1)) ||
-      (playerName === "player2" && myPlayerNumber === 2);
-
 
     if (isMyWin && currentUser) {
       await addCoins(50); // Kazanma ödülü: 50 altın
@@ -771,12 +909,12 @@ async function handleGuess(playerName, gridInputs, currentRow, messageEl, guessB
 
   currentRow++;
   if (currentRow >= ROWS) {
-    showToast("Tahmin hakkın bitti. Kelime: " + secretWord, "info", 5000);
     guessButton.disabled = true;
 
     // Lokal modda veya tek oyuncuysa anlamı göster
     if (isLocalMode) {
       showNewGameButton();
+      showGameEndModal(false, secretWord);
     }
 
     // İki oyuncu da tahminlerini tükettiyse oyun biter
@@ -902,6 +1040,8 @@ function resetGame(skipWordSelection = false, forceNewWord = false) {
     // Sıra durumunu güncelle
     updateBoardsForTurn();
   }
+
+  createKeyboard();
 
 }
 
@@ -1169,21 +1309,26 @@ async function initGame() {
 }
 
 
-// Google giriş butonu
-document.getElementById("googleLoginBtn").addEventListener("click", () => {
-  loginWithGoogle();
-});
+// Auth-related Listeners
+const googleLoginBtnEl = document.getElementById("googleLoginBtn");
+if (googleLoginBtnEl) {
+    googleLoginBtnEl.addEventListener("click", () => loginWithGoogle());
+}
 
-// Misafir olarak devam et
-document.getElementById("skipLoginBtn").addEventListener("click", () => {
-  document.getElementById("login-screen").style.display = "none";
-  document.getElementById("mode-selection").style.display = "block";
-});
+const skipLoginBtnEl = document.getElementById("skipLoginBtn");
+if (skipLoginBtnEl) {
+    skipLoginBtnEl.addEventListener("click", () => {
+        const loginScreen = document.getElementById("login-screen");
+        const modeSelection = document.getElementById("mode-selection");
+        if (loginScreen) loginScreen.style.display = "none";
+        if (modeSelection) modeSelection.style.display = "block";
+    });
+}
 
-// Çıkış butonu
-document.getElementById("logoutBtn").addEventListener("click", () => {
-  logout();
-});
+const logoutBtnEl = document.getElementById("logoutBtn");
+if (logoutBtnEl) {
+    logoutBtnEl.addEventListener("click", () => logout());
+}
 
 // Lokal mod başlat
 document.getElementById("localModeBtn").addEventListener("click", async () => {
@@ -1336,7 +1481,7 @@ document.getElementById("disconnectBtn").addEventListener("click", () => {
 
 // Rastgele oda kodu oluştur
 function generateRoomCode() {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
+  return String(Math.floor(10000 + Math.random() * 90000));
 }
 
 // Oda oluştur (Firebase)
@@ -1853,6 +1998,9 @@ function applyOpponentGuess(guessData) {
       currentRow1 = guessData.currentRow;
     }
 
+    // Rakibin bulduğu harfleri de klavyede göster
+    updateKeyColors(guessData.guess, guessData.result);
+
   }
 }
 
@@ -1890,14 +2038,14 @@ async function handleOnlineGameEnd(winnerPlayer) {
 
   const isMyWin = (winnerPlayer === "player1" && myPlayerNumber === 1) || (winnerPlayer === "player2" && myPlayerNumber === 2);
 
+  showGameEndModal(isMyWin, secretWord);
+
   if (isMyWin) {
-    showToast("🎉 TEBRİKLER! Oyunu sen kazandın! Kelime: " + secretWord, "win", 5000);
     if (currentUser) {
       await addCoins(50);
       await updateUserStats(true);
     }
   } else {
-    showToast("😔 Kaybettin! Rakip kelimeyi buldu: " + secretWord, "error", 5000);
     if (currentUser) {
       await updateUserStats(false);
     }
@@ -2255,11 +2403,32 @@ initGame();
 
 
 
-// PWA Service Worker Registration
+// PWA Service Worker Registration with Auto-Update
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('Service Worker registered!', reg))
-      .catch(err => console.log('Service Worker registration failed: ', err));
+    navigator.serviceWorker.register('./sw.js?v=18')
+      .then(reg => {
+        console.log('SW Registered!', reg);
+        
+        // New update found
+        reg.onupdatefound = () => {
+          const installingWorker = reg.installing;
+          installingWorker.onstatechange = () => {
+            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // New worker is ready, force reload after skipWaiting triggers skip
+              window.location.reload();
+            }
+          };
+        };
+      })
+      .catch(err => console.log('SW Failed: ', err));
+  });
+
+  // Force actual reload when the service worker changes
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
   });
 }

@@ -9,14 +9,15 @@
 
   <!-- PWA & Mobile Meta Tags -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1a1a1a">
+  <meta name="theme-color" content="#0a0a0f">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Kelime">
   <link rel="apple-touch-icon" href="icon-512.png">
   <link rel="icon" type="image/png" href="icon-512.png">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=10">
+  <link rel="stylesheet" href="styles.css?v=31">
 </head>
 
 <body>
@@ -42,26 +43,25 @@
     <!-- Google Giriş Ekranı -->
     <div id="login-screen" class="login-container">
       <div class="login-hero">
-        <div class="game-logo">🎮</div>
-        <h2 class="login-title">Hoş Geldiniz!</h2>
+        <div class="game-logo-text">WORDL</div>
         <p class="login-subtitle">
-          Türkçe Wordl'e katılın, altın kazanın ve<br>
-          güçlendirmelerle oyunu daha eğlenceli hale getirin!
+          Türkçe kelime bulmacası.<br>
+          Arkadaşlarınla yarış, altın kazan!
         </p>
       </div>
 
       <div class="login-features">
+        <div class="feature-item">
+          <span class="feature-icon">⚔️</span>
+          <span class="feature-text">PvP Mod</span>
+        </div>
         <div class="feature-item">
           <span class="feature-icon">💰</span>
           <span class="feature-text">Altın Kazan</span>
         </div>
         <div class="feature-item">
           <span class="feature-icon">⚡</span>
-          <span class="feature-text">Güçlendirmeler</span>
-        </div>
-        <div class="feature-item">
-          <span class="feature-icon">📊</span>
-          <span class="feature-text">İstatistikler</span>
+          <span class="feature-text">Power-Up</span>
         </div>
       </div>
 
@@ -84,46 +84,64 @@
       </div>
 
       <button id="skipLoginBtn" class="skip-login-btn">
-        <span style="margin-right: 6px;">👤</span>
-        Misafir Olarak Devam Et
+        👤 Misafir Olarak Devam Et
       </button>
 
       <p class="login-note">
-        💡 Misafir olarak oynayabilirsiniz ancak altın kazanamaz ve<br>
-        güçlendirmeleri kullanamazsınız.
+        Misafir olarak altın kazanamaz ve güçlendirme kullanamazsınız.
       </p>
     </div>
 
     <div class="connection-box" id="mode-selection" style="display: none;">
-      <h2>Oyun Modunu Seç</h2>
+      <h2 class="mode-title">Oyun Modu</h2>
       <div class="mode-buttons">
-        <button id="localModeBtn" class="mode-button">🖥️ Lokal Oyun<br><small>Aynı cihazda oyna</small></button>
-        <button id="onlineModeBtn" class="mode-button">🌐 Online Oyun<br><small>Arkadaşınla oyna</small></button>
+        <button id="localModeBtn" class="mode-card">
+          <div class="mode-card-icon">🎯</div>
+          <div class="mode-card-info">
+            <span class="mode-card-title">Tek Kişilik</span>
+            <span class="mode-card-desc">Kendi başına pratik yap</span>
+          </div>
+          <span class="mode-card-arrow">→</span>
+        </button>
+        <button id="onlineModeBtn" class="mode-card online">
+          <div class="mode-card-icon">⚔️</div>
+          <div class="mode-card-info">
+            <span class="mode-card-title">Online PvP</span>
+            <span class="mode-card-desc">Arkadaşınla yarış</span>
+          </div>
+          <span class="mode-card-arrow">→</span>
+        </button>
       </div>
     </div>
 
     <div id="online-options" class="connection-box" style="display: none;">
-      <h2>Online Oyun</h2>
+      <h2 class="mode-title">Online Oyun</h2>
       <div class="online-buttons">
-        <button id="createRoomBtn" class="action-button">Oda Oluştur</button>
-        <button id="joinRoomBtn" class="action-button">Odaya Katıl</button>
+        <button id="createRoomBtn" class="online-action-card">
+          <span class="online-action-icon">🏠</span>
+          <span>Oda Oluştur</span>
+        </button>
+        <button id="joinRoomBtn" class="online-action-card">
+          <span class="online-action-icon">🚪</span>
+          <span>Odaya Katıl</span>
+        </button>
       </div>
 
       <div id="room-info" style="display: none;">
-        <div class="info-box">
-          <p><strong>Oda Kodu:</strong></p>
+        <div class="room-card">
+          <p class="room-card-label">Oda Kodu</p>
           <div class="room-code-display">
             <input type="text" id="roomCodeDisplay" readonly>
-            <button id="copyCodeBtn" class="copy-button">📋 Kopyala</button>
+            <button id="copyCodeBtn" class="copy-button">📋</button>
           </div>
-          <p class="waiting-text">Diğer oyuncu bekleniyor...</p>
+          <p class="waiting-text">⏳ Rakip bekleniyor...</p>
         </div>
       </div>
 
       <div id="join-form" style="display: none;">
-        <div class="info-box">
-          <p><strong>Oda Kodunu Gir:</strong></p>
-          <input type="text" id="roomCodeInput" placeholder="Oda kodunu buraya yapıştır">
+        <div class="room-card">
+          <p class="room-card-label">Oda Kodunu Gir</p>
+          <input type="tel" id="roomCodeInput" placeholder="12345" maxlength="5" pattern="[0-9]*" inputmode="numeric">
           <button id="connectBtn" class="action-button">Bağlan</button>
         </div>
       </div>
@@ -166,7 +184,8 @@
       <div class="player-section" id="player1Section">
 
         <div id="board1" class="board"></div>
-        <button id="guessButton1" class="guess-button">Tahmini Kontrol Et</button>
+        <!-- Guess Button Hidden (Keyboard Enter used instead) -->
+      <button id="guessButton1" class="guess-button" style="display: none;">Tahmini Kontrol Et</button>
         <div id="powerups-player1" class="powerups-grid-mini">
             <!-- Powerups will be moved here in a compact form -->
             <button id="revealLetterBtn1" class="powerup-btn-mini" title="İpucu"><span>💡</span><small>10</small></button>
@@ -178,7 +197,7 @@
       <div class="player-section" id="player2Section">
 
         <div id="board2" class="board"></div>
-        <button id="guessButton2" class="guess-button">Tahmini Kontrol Et</button>
+        <button id="guessButton2" class="guess-button" style="display: none;">Tahmini Kontrol Et</button>
         <div id="powerups-player2" class="powerups-grid-mini">
             <button id="revealLetterBtn2" class="powerup-btn-mini" title="İpucu"><span>💡</span><small>10</small></button>
             <button id="revealTileBtn2" class="powerup-btn-mini" title="Harf Seç"><span>🎯</span><small>20</small></button>
@@ -188,7 +207,7 @@
     </div>
 
 
-      <div id="controls">
+      <div id="controls" style="display: none;">
         <button id="resetButton" style="display: none;">Yeniden Başlat</button>
         <button id="newGameButton" style="display: none;">🎮 Yeni Oyun</button>
         <!-- Timer removed from here -->
@@ -196,8 +215,11 @@
         <button id="disconnectBtn" class="disconnect-button">🚪 Ayrıl</button>
       </div>
 
-      <!-- Emoji Bar -->
-      <div id="emoji-bar" class="emoji-bar">
+      <!-- Sanal Klavye -->
+      <div id="keyboard-container" class="keyboard-container"></div>
+
+      <!-- Emoji Bar (Gizli) -->
+      <div id="emoji-bar" class="emoji-bar" style="display: none;">
         <button class="emoji-btn" onclick="sendEmoji('👋')">👋</button>
         <button class="emoji-btn" onclick="sendEmoji('😂')">😂</button>
         <button class="emoji-btn" onclick="sendEmoji('🤔')">🤔</button>
@@ -246,7 +268,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 
-  <script src="script.js?v=9"></script>
+  <script src="script.js?v=31"></script>
 
 
 </body>
