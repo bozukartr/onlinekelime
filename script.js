@@ -1123,7 +1123,18 @@ async function loginWithGoogle() {
       prompt: 'select_account'
     });
     
-    // Reverting to Popup as primary, with Redirect as fallback
+    // Cihaz ve Mod kontrolü
+    const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+    // PWA veya iOS ise direkt Redirect kullan (Popup genellikle bloklanır)
+    if (isStandalone || isIOS) {
+        console.log("PWA/iOS detected: forcing redirect...");
+        auth.signInWithRedirect(provider);
+        return;
+    }
+
+    // Normal tarayıcı için Popup öncelikli Hibrit Strateji
     try {
         console.log("Attempting popup login...");
         const result = await auth.signInWithPopup(provider);
@@ -1135,7 +1146,7 @@ async function loginWithGoogle() {
             popupError.code === 'auth/network-request-failed') {
             auth.signInWithRedirect(provider);
         } else {
-            alert("Giriş hatası: " + popupError.message);
+            alert("Giriş hatası (" + popupError.code + "): " + popupError.message);
         }
     }
 
@@ -1308,6 +1319,23 @@ async function logout() {
     console.error('Çıkış hatası:', error);
     alert('Çıkış yapılamadı: ' + error.message);
   }
+}
+
+// Zorla önbellek temizle (Diğer telefonlardaki eski SW sorunları için)
+async function forceClearCache() {
+    if (confirm("Uygulamayı sıfırlamak ve en güncel sürümü yüklemek istiyor musunuz? (Giriş yapmanız gerekecek)")) {
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (let registration of registrations) {
+                await registration.unregister();
+            }
+        }
+        const names = await caches.keys();
+        for (let name of names) {
+            await caches.delete(name);
+        }
+        window.location.reload(true);
+    }
 }
 
 // Sayfa yüklendiğinde kelimeleri yükle
@@ -2498,7 +2526,7 @@ initGame();
 // PWA Service Worker Registration with Auto-Update
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=41')
+    navigator.serviceWorker.register('./sw.js?v=42')
       .then(reg => {
         console.log('SW Registered!', reg);
         
