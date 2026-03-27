@@ -1,4 +1,4 @@
-const CACHE_NAME = 'online-kelime-v38'; // v38 - 2026-03-27 15:38
+const CACHE_NAME = 'online-kelime-v39'; // v39 - 2026-03-27 15:45
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -33,9 +33,15 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-    // Skip non-GET requests (like POST) as they cannot be cached
-    if (event.request.method !== 'GET') return;
-    
+    // Exclude Firebase Auth and Google APIs from SW interception
+    if (event.request.url.includes('/__/auth/') || 
+        event.request.url.includes('googleapis.com') || 
+        event.request.url.includes('firebase.com') || 
+        event.request.url.includes('google.com') ||
+        event.request.url.includes('firebaseapp.com')) {
+        return; 
+    }
+
     // Network-First strategy
     const isCoreAsset = ASSETS_TO_CACHE.some(asset => event.request.url.includes(asset.replace('./', '')));
 

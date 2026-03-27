@@ -1061,9 +1061,13 @@ function initFirebase() {
     auth = firebase.auth();
 
     // Auth durumunu dinle
-    auth.onAuthStateChanged((user) => {
+    auth.onAuthStateChanged(async (user) => {
       if (user) {
         currentUser = user;
+        
+        // Giriş yapıldıysa kullanıcı verilerini kontrol et/başlat
+        await initializeUserData(user.uid, user.displayName, user.photoURL);
+        
         showUserProfile(user);
         loadUserData(user.uid);
 
@@ -1095,12 +1099,10 @@ async function loginWithGoogle() {
       prompt: 'select_account'
     });
 
-    const result = await auth.signInWithPopup(provider);
-    const user = result.user;
-
-
-    // Kullanıcı veritabanını oluştur/güncelle
-    await initializeUserData(user.uid, user.displayName, user.photoURL);
+    // PWA için 'signInWithRedirect' daha güvenlidir
+    auth.signInWithRedirect(provider);
+    
+    // Yönlendirme sonrası onAuthStateChanged tetiklenecek
 
     // onAuthStateChanged otomatik olarak ekranları değiştirecek
 
@@ -2461,7 +2463,7 @@ initGame();
 // PWA Service Worker Registration with Auto-Update
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=18')
+    navigator.serviceWorker.register('./sw.js?v=39')
       .then(reg => {
         console.log('SW Registered!', reg);
         
