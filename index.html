@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Türkçe Kelime Bulmacası - Online Wordle</title>
+  <title>WORDL – Türkçe Kelime Bulmacası</title>
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
 
@@ -12,41 +12,47 @@
   <meta name="theme-color" content="#0a0a0f">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Kelime">
+  <meta name="apple-mobile-web-app-title" content="WORDL">
   <link rel="apple-touch-icon" href="icon-512.png">
   <link rel="icon" type="image/png" href="icon-512.png">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-  <link rel="stylesheet" href="styles.css?v=49">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=50">
 </head>
 
 <body>
-  <h1>Türkçe Wordl</h1>
-  <div class="subtitle">
-    Kelime dağarcığına güveniyor musun?
-  </div>
+  <!-- Toast Notifications -->
+  <div id="toastContainer" class="toast-container"></div>
 
-  <!-- Kullanıcı Profili -->
-  <div id="user-profile" style="display: none;">
-    <div class="profile-card">
-      <img id="userAvatar" src="" alt="Avatar" class="user-avatar">
-      <div class="user-info">
-        <span id="userName">Kullanıcı</span>
-        <span id="userCoins" class="coins">💰 0</span>
-      </div>
-      <button id="logoutBtn" class="logout-btn">Çıkış</button>
-    </div>
-  </div>
-
-  <!-- Bağlantı Ekranı -->
+  <!-- ==========================================
+       CONNECTION / LOBBY SCREEN
+       ========================================== -->
   <div id="connection-screen">
-    <!-- Google Giriş Ekranı -->
+
+    <!-- User Profile Card (shown after login) -->
+    <div id="user-profile" style="display: none;">
+      <div class="profile-card">
+        <img id="userAvatar" src="" alt="Avatar" class="user-avatar">
+        <div class="user-info">
+          <span id="userName">Kullanıcı</span>
+          <span id="userCoins" class="coins">💰 0</span>
+        </div>
+        <button id="logoutBtn" class="logout-btn">Çıkış</button>
+      </div>
+    </div>
+
+    <!-- Login Screen -->
     <div id="login-screen" class="login-container">
       <div class="login-hero">
+        <div class="login-tiles-row">
+          <div class="demo-tile correct">W</div>
+          <div class="demo-tile present">O</div>
+          <div class="demo-tile absent">R</div>
+          <div class="demo-tile absent">D</div>
+          <div class="demo-tile correct">L</div>
+        </div>
         <div class="game-logo-text">WORDL</div>
         <p class="login-subtitle">
-          Türkçe kelime bulmacası.<br>
-          Arkadaşlarınla yarış, altın kazan!
+          Türkçe kelime bulmacası.<br>Arkadaşlarınla yarış, altın kazan!
         </p>
       </div>
 
@@ -65,35 +71,32 @@
         </div>
       </div>
 
-      <button id="googleLoginBtn" class="google-login-btn">
-        <svg width="20" height="20" viewBox="0 0 18 18" style="margin-right: 10px;">
-          <path fill="#4285F4"
-            d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" />
-          <path fill="#34A853"
-            d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" />
-          <path fill="#FBBC05"
-            d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z" />
-          <path fill="#EA4335"
-            d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" />
-        </svg>
-        Google ile Giriş Yap
-      </button>
+      <div class="login-actions">
+        <button id="googleLoginBtn" class="google-login-btn">
+          <svg width="20" height="20" viewBox="0 0 18 18" aria-hidden="true">
+            <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+            <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+            <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z"/>
+            <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+          </svg>
+          Google ile Giriş Yap
+        </button>
 
-      <div class="divider">
-        <span>veya</span>
+        <div class="divider"><span>veya</span></div>
+
+        <button id="skipLoginBtn" class="skip-login-btn">
+          👤 Misafir Olarak Devam Et
+        </button>
+
+        <p class="login-note">
+          Misafir olarak altın kazanamaz ve güçlendirme kullanamazsınız.
+        </p>
       </div>
-
-      <button id="skipLoginBtn" class="skip-login-btn">
-        👤 Misafir Olarak Devam Et
-      </button>
-
-      <p class="login-note">
-        Misafir olarak altın kazanamaz ve güçlendirme kullanamazsınız.
-      </p>
     </div>
 
+    <!-- Mode Selection -->
     <div class="connection-box" id="mode-selection" style="display: none;">
-      <h2 class="mode-title">Oyun Modu</h2>
+      <h2 class="mode-title">Oyun Modu Seç</h2>
       <div class="mode-buttons">
         <button id="localModeBtn" class="mode-card">
           <div class="mode-card-icon">🎯</div>
@@ -101,7 +104,7 @@
             <span class="mode-card-title">Tek Kişilik</span>
             <span class="mode-card-desc">Kendi başına pratik yap</span>
           </div>
-          <span class="mode-card-arrow">→</span>
+          <span class="mode-card-arrow">›</span>
         </button>
         <button id="onlineModeBtn" class="mode-card online">
           <div class="mode-card-icon">⚔️</div>
@@ -109,11 +112,12 @@
             <span class="mode-card-title">Online PvP</span>
             <span class="mode-card-desc">Arkadaşınla yarış</span>
           </div>
-          <span class="mode-card-arrow">→</span>
+          <span class="mode-card-arrow">›</span>
         </button>
       </div>
     </div>
 
+    <!-- Online Options -->
     <div id="online-options" class="connection-box" style="display: none;">
       <h2 class="mode-title">Online Oyun</h2>
       <div class="online-buttons">
@@ -141,22 +145,56 @@
       <div id="join-form" style="display: none;">
         <div class="room-card">
           <p class="room-card-label">Oda Kodunu Gir</p>
-          <input type="tel" id="roomCodeInput" placeholder="12345" maxlength="5" pattern="[0-9]*" inputmode="numeric">
+          <input type="tel" id="roomCodeInput" placeholder="12345" maxlength="5"
+            pattern="[0-9]*" inputmode="numeric">
           <button id="connectBtn" class="action-button">Bağlan</button>
         </div>
       </div>
 
       <button id="backBtn" class="back-button">← Geri</button>
     </div>
+
   </div>
+  <!-- end #connection-screen -->
 
-  <!-- Oyun Ekranı -->
+
+  <!-- ==========================================
+       GAME SCREEN (full-screen overlay on mobile)
+       ========================================== -->
   <div id="game-screen" style="display: none;">
-    <div id="connection-status" class="status-bar">
-      <span id="statusText">🟢 Bağlı</span>
-      <span id="opponentName">Rakip: Bekleniyor...</span>
-    </div>
 
+    <!-- App Header Bar -->
+    <header class="game-header">
+      <div class="header-left">
+        <button id="backToMenuBtn" class="header-icon-btn" title="Ana Menü" style="display: none;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="header-center">
+        <span class="header-logo">WORDL</span>
+        <div id="connection-status" class="connection-badge" style="display: none;">
+          <span id="statusText">🟢 Bağlı</span>
+          <span class="status-sep">·</span>
+          <span id="opponentName" class="opponent-label"></span>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <span id="gameCoins" class="header-coins" style="display: none;">💰 0</span>
+        <button id="disconnectBtn" class="header-icon-btn header-danger" title="Ayrıl" style="display: none;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Player Tabs (online mode only) -->
     <div id="game-tabs" class="tabs-container" style="display: none;">
       <button id="tabPlayer1" class="tab-btn active">
         <div class="tab-avatar-wrap">
@@ -180,107 +218,104 @@
       </button>
     </div>
 
+    <!-- Game Boards -->
     <div id="game-container">
       <div class="player-section" id="player1Section">
-
         <div id="board1" class="board"></div>
-        <!-- Guess Button Hidden (Keyboard Enter used instead) -->
-      <button id="guessButton1" class="guess-button" style="display: none;">Tahmini Kontrol Et</button>
+        <button id="guessButton1" class="guess-button" style="display: none;">Tahmini Kontrol Et</button>
       </div>
-
       <div class="player-section" id="player2Section">
-
         <div id="board2" class="board"></div>
         <button id="guessButton2" class="guess-button" style="display: none;">Tahmini Kontrol Et</button>
       </div>
     </div>
 
-
-      <div id="controls" style="display: none;">
-        <button id="resetButton" style="display: none;">Yeniden Başlat</button>
-        <button id="newGameButton" style="display: none;">🎮 Yeni Oyun</button>
-        <!-- Timer removed from here -->
-        <button id="backToMenuBtn" class="menu-button">🏠 Ana Menü</button>
-        <button id="disconnectBtn" class="disconnect-button">🚪 Ayrıl</button>
-      </div>
-
-      <!-- Sanal Klavye -->
-      <div id="keyboard-container" class="keyboard-container" style="position: relative;">
-          <!-- Powerup Menu Overlay -->
-          <div id="powerup-menu" class="powerup-menu-overlay" style="display: none;">
-              <div class="powerup-menu-title">🚀 Özellikler</div>
-              <div class="powerups-grid-mini">
-                  <button id="revealLetterBtn" class="powerup-btn-mini" title="Harf İpucu"><span>💡</span><small>10</small></button>
-                  <button id="revealTileBtn" class="powerup-btn-mini" title="Harf Seç"><span>🎯</span><small>20</small></button>
-                  <button id="fogBtn" class="powerup-btn-mini" title="Sis Bombası"><span>🌫️</span><small>30</small></button>
-              </div>
-          </div>
-          <div id="virtual-keyboard"></div>
-      </div>
-
-      <!-- Emoji Bar (Gizli) -->
-      <div id="emoji-bar" class="emoji-bar" style="display: none;">
-        <button class="emoji-btn" onclick="sendEmoji('👋')">👋</button>
-        <button class="emoji-btn" onclick="sendEmoji('😂')">😂</button>
-        <button class="emoji-btn" onclick="sendEmoji('🤔')">🤔</button>
-        <button class="emoji-btn" onclick="sendEmoji('😱')">😱</button>
-        <button class="emoji-btn" onclick="sendEmoji('🔥')">🔥</button>
-        <button class="emoji-btn" onclick="sendEmoji('😡')">😡</button>
-        <button class="emoji-btn" onclick="sendEmoji('👏')">👏</button>
-        <button class="emoji-btn" onclick="sendEmoji('😭')">😭</button>
-        <button class="emoji-btn" onclick="sendEmoji('❤️')">❤️</button>
-        <!-- Romantic Emojis -->
-        <button class="emoji-btn" onclick="sendEmoji('🥰')">🥰</button>
-        <button class="emoji-btn" onclick="sendEmoji('😘')">😘</button>
-        <button class="emoji-btn" onclick="sendEmoji('😍')">😍</button>
-        <button class="emoji-btn" onclick="sendEmoji('💖')">💖</button>
-        <!-- Moody Emojis -->
-        <button class="emoji-btn" onclick="sendEmoji('😔')">😔</button>
-        <button class="emoji-btn" onclick="sendEmoji('😩')">😩</button>
-        <button class="emoji-btn" onclick="sendEmoji('😤')">😤</button>
-        <button class="emoji-btn" onclick="sendEmoji('😒')">😒</button>
-        <!-- Hand Gestures Emojis -->
-        <button class="emoji-btn" onclick="sendEmoji('👍')">👍</button>
-        <button class="emoji-btn" onclick="sendEmoji('👎')">👎</button>
-        <button class="emoji-btn" onclick="sendEmoji('🙏')">🙏</button>
-        <button class="emoji-btn" onclick="sendEmoji('🤞')">🤞</button>
-      </div>
-
+    <!-- Hidden Controls (programmatic click targets only) -->
+    <div id="controls" style="display: none;">
+      <button id="resetButton">Yeniden Başlat</button>
+      <button id="newGameButton">🎮 Yeni Oyun</button>
     </div>
 
+    <!-- Keyboard Area -->
+    <div id="keyboard-container" class="keyboard-container">
+      <!-- Power-up Overlay -->
+      <div id="powerup-menu" class="powerup-menu-overlay" style="display: none;">
+        <div class="powerup-menu-title">⚡ Güçlendirmeler</div>
+        <div class="powerups-grid-mini">
+          <button id="revealLetterBtn" class="powerup-btn-mini" title="Harf İpucu">
+            <span>💡</span>
+            <span class="powerup-label">Harf</span>
+            <span class="powerup-cost">10 💰</span>
+          </button>
+          <button id="revealTileBtn" class="powerup-btn-mini" title="Harf Seç">
+            <span>🎯</span>
+            <span class="powerup-label">Seç</span>
+            <span class="powerup-cost">20 💰</span>
+          </button>
+          <button id="fogBtn" class="powerup-btn-mini" title="Sis Bombası">
+            <span>🌫️</span>
+            <span class="powerup-label">Sis</span>
+            <span class="powerup-cost">30 💰</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Virtual Keyboard -->
+      <div id="virtual-keyboard"></div>
+    </div>
+
+    <!-- Emoji Bar -->
+    <div id="emoji-bar" class="emoji-bar" style="display: none;">
+      <button class="emoji-btn" onclick="sendEmoji('👋')">👋</button>
+      <button class="emoji-btn" onclick="sendEmoji('😂')">😂</button>
+      <button class="emoji-btn" onclick="sendEmoji('🤔')">🤔</button>
+      <button class="emoji-btn" onclick="sendEmoji('😱')">😱</button>
+      <button class="emoji-btn" onclick="sendEmoji('🔥')">🔥</button>
+      <button class="emoji-btn" onclick="sendEmoji('😡')">😡</button>
+      <button class="emoji-btn" onclick="sendEmoji('👏')">👏</button>
+      <button class="emoji-btn" onclick="sendEmoji('😭')">😭</button>
+      <button class="emoji-btn" onclick="sendEmoji('❤️')">❤️</button>
+      <button class="emoji-btn" onclick="sendEmoji('🥰')">🥰</button>
+      <button class="emoji-btn" onclick="sendEmoji('😘')">😘</button>
+      <button class="emoji-btn" onclick="sendEmoji('😍')">😍</button>
+      <button class="emoji-btn" onclick="sendEmoji('💖')">💖</button>
+      <button class="emoji-btn" onclick="sendEmoji('😔')">😔</button>
+      <button class="emoji-btn" onclick="sendEmoji('😩')">😩</button>
+      <button class="emoji-btn" onclick="sendEmoji('😤')">😤</button>
+      <button class="emoji-btn" onclick="sendEmoji('😒')">😒</button>
+      <button class="emoji-btn" onclick="sendEmoji('👍')">👍</button>
+      <button class="emoji-btn" onclick="sendEmoji('👎')">👎</button>
+      <button class="emoji-btn" onclick="sendEmoji('🙏')">🙏</button>
+      <button class="emoji-btn" onclick="sendEmoji('🤞')">🤞</button>
+    </div>
 
   </div>
+  <!-- end #game-screen -->
 
-  <!-- Firebase CDN -->
-  <!-- Custom Modal -->
+
+  <!-- ==========================================
+       MODAL
+       ========================================== -->
   <div id="customModal" class="modal-overlay" style="display: none;">
     <div class="modal-content">
       <h3 id="modalTitle">Bilgi</h3>
       <div id="modalMessage">Mesaj</div>
-      <div id="modalActions" class="modal-actions">
-        <!-- Buttons will be injected here -->
-      </div>
+      <div id="modalActions" class="modal-actions"></div>
     </div>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js?v=49');
+      navigator.serviceWorker.register('./sw.js?v=50');
     }
   </script>
-  <script src="script.js?v=49"></script>
-
-
+  <script src="script.js?v=50"></script>
 </body>
-
-
-
-
-
 
 </html>

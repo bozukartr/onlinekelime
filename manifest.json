@@ -1,11 +1,11 @@
 {
-    "name": "Türkçe Kelime Bulmacası",
-    "short_name": "Kelime",
+    "name": "WORDL – Türkçe Kelime Bulmacası",
+    "short_name": "WORDL",
     "description": "Arkadaşlarınla online yarışabileceğin 5 harfli kelime bulma oyunu.",
     "start_url": "./index.html",
     "display": "standalone",
-    "background_color": "#1a1a1a",
-    "theme_color": "#1a1a1a",
+    "background_color": "#0a0a0f",
+    "theme_color": "#0a0a0f",
     "orientation": "portrait",
     "icons": [
         {

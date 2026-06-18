@@ -1,4 +1,4 @@
-const CACHE_NAME = 'online-kelime-v49'; // v49 - 2026-03-27 17:20
+const CACHE_NAME = 'online-kelime-v50'; // v50 - mobile responsive redesign
 const ASSETS_TO_CACHE = [
     './',
     './index.html',

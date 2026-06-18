@@ -1253,6 +1253,10 @@ function updateCoinsDisplay() {
   if (coinsEl) {
     coinsEl.textContent = "💰 " + userCoins;
   }
+  const gameCoinsEl = document.getElementById("gameCoins");
+  if (gameCoinsEl) {
+    gameCoinsEl.textContent = "💰 " + userCoins;
+  }
 
   // Power-up butonlarını güncelle
   updatePowerupButtons();
@@ -1279,10 +1283,12 @@ function showUserProfile(user) {
   const profileEl = document.getElementById("user-profile");
   const avatarEl = document.getElementById("userAvatar");
   const nameEl = document.getElementById("userName");
+  const gameCoinsEl = document.getElementById("gameCoins");
 
   if (profileEl) profileEl.style.display = "block";
   if (avatarEl) avatarEl.src = user.photoURL || "https://via.placeholder.com/48";
   if (nameEl) nameEl.textContent = user.displayName || "Oyuncu";
+  if (gameCoinsEl) gameCoinsEl.style.display = "flex";
 
   updateCoinsDisplay();
 }
@@ -1291,6 +1297,8 @@ function showUserProfile(user) {
 function hideUserProfile() {
   const profileEl = document.getElementById("user-profile");
   if (profileEl) profileEl.style.display = "none";
+  const gameCoinsEl = document.getElementById("gameCoins");
+  if (gameCoinsEl) gameCoinsEl.style.display = "none";
 }
 
 // Çıkış yap
@@ -1306,7 +1314,7 @@ async function logout() {
     // Oyun ekranındaysa ana menüye dön
     if (gameScreen.style.display !== "none") {
       gameScreen.style.display = "none";
-      connectionScreen.style.display = "block";
+      connectionScreen.style.display = "flex";
     }
 
   } catch (error) {
@@ -1385,7 +1393,7 @@ document.getElementById("localModeBtn").addEventListener("click", async () => {
   isOnlineMode = false;
   myPlayerNumber = 0; // Lokal modda tek oyuncu
   connectionScreen.style.display = "none";
-  gameScreen.style.display = "block";
+  gameScreen.style.display = "flex";
   document.getElementById("connection-status").style.display = "none";
 
   // Lokal modda sadece tek board göster
@@ -1493,7 +1501,7 @@ document.getElementById("backToMenuBtn").addEventListener("click", async () => {
 
     // Lokal modda direkt ana menüye dön
     gameScreen.style.display = "none";
-    connectionScreen.style.display = "block";
+    connectionScreen.style.display = "flex";
     onlineOptions.style.display = "none";
 
     // Ekranları kullanıcı durumuna göre ayarla
@@ -1938,7 +1946,7 @@ async function updateOpponentInfo() {
 // Online oyunu başlat
 async function startOnlineGame() {
   connectionScreen.style.display = "none";
-  gameScreen.style.display = "block";
+  gameScreen.style.display = "flex";
   document.getElementById("connection-status").style.display = "flex";
 
   // Online modda sekme sistemini göster
@@ -2189,7 +2197,7 @@ async function disconnect() {
 
   // Bağlantı ekranına dön
   gameScreen.style.display = "none";
-  connectionScreen.style.display = "block";
+  connectionScreen.style.display = "flex";
   onlineOptions.style.display = "none";
   roomInfo.style.display = "none";
   joinForm.style.display = "none";
