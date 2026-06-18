@@ -2544,32 +2544,4 @@ initGame();
 
 
 
-// PWA Service Worker Registration with Auto-Update
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=49')
-      .then(reg => {
-        console.log('SW Registered!', reg);
-        
-        // New update found
-        reg.onupdatefound = () => {
-          const installingWorker = reg.installing;
-          installingWorker.onstatechange = () => {
-            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // New worker is ready, force reload after skipWaiting triggers skip
-              window.location.reload();
-            }
-          };
-        };
-      })
-      .catch(err => console.log('SW Failed: ', err));
-  });
-
-  // Force actual reload when the service worker changes
-  let refreshing = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (refreshing) return;
-    refreshing = true;
-    window.location.reload();
-  });
-}
+// SW registration is handled in index.html to avoid duplicate registration loops
